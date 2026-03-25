@@ -1,7 +1,7 @@
 """
-Document processing functionality for RAGAnything
+RAGAnything 的文档处理功能
 
-Contains methods for parsing documents and processing multimodal content
+包含用于解析文档及处理多模态内容的方法
 """
 
 import os
@@ -24,17 +24,17 @@ from lightrag.utils import compute_mdhash_id
 
 
 class ProcessorMixin:
-    """ProcessorMixin class containing document processing functionality for RAGAnything"""
+    """ProcessorMixin 类：包含 RAGAnything 的文档处理功能"""
 
     def _get_file_reference(self, file_path: str) -> str:
         """
-        Get file reference based on use_full_path configuration.
+        根据 use_full_path 配置获取文件引用
 
-        Args:
-            file_path: Path to the file (can be absolute or relative)
+        参数说明：
+            file_path: 文件的路径（可以是绝对路径或相对路径）
 
-        Returns:
-            str: Full path if use_full_path is True, otherwise basename
+        返回：
+            str: 如果 use_full_path 为 True，则返回完整路径；否则返回纯文件名（不带路径）。
         """
         if self.config.use_full_path:
             return str(file_path)
@@ -101,7 +101,7 @@ class ProcessorMixin:
         返回：
             str: 带有 "doc-" 前缀的、基于内容生成的唯一标识字符串
         """
-        # # 导入 LightRAG 提供的 MD5 哈希计算工具（计算工具具体怎么工作我没看）
+        # 导入 LightRAG 提供的 MD5 哈希计算工具
         from lightrag.utils import compute_mdhash_id
 
         # 用于存放所有提取出的关键内容片段，最后合并计算哈希
@@ -546,22 +546,25 @@ class ProcessorMixin:
             pipeline_status_lock: Optional[Any] = None,
     ):
         """
-        Process multimodal content (using specialized processors)
+        处理多模态内容（调用专门的处理器，如图片/表格处理器）
 
-        Args:
-            multimodal_items: List of multimodal items
-            file_path: File path (for reference)
-            doc_id: Document ID for proper chunk association
-            pipeline_status: Pipeline status object
-            pipeline_status_lock: Pipeline status lock
+        参数说明：
+            multimodal_items: 多模态项目列表（提取出的图片、表格等）
+            file_path: 文件路径（用于引用）
+            doc_id: 文档 ID，用于确保分片能正确关联到原文档
+            pipeline_status: 流水线状态对象（用于前端显示进度）
+            pipeline_status_lock: 流水线状态锁（防止多线程冲突）
         """
 
+        # 检查是否有需要处理的内容
         if not multimodal_items:
-            self.logger.debug("No multimodal content to process")
+            self.logger.debug("没有需要处理的多模态内容")
             return
 
         callback_manager = getattr(self, "callback_manager", None)
         mm_start_time = time.time()
+
+        # 触发“多模态处理开始”的回调通知
         if callback_manager is not None:
             callback_manager.dispatch(
                 "on_multimodal_start",
@@ -570,41 +573,41 @@ class ProcessorMixin:
                 doc_id=doc_id,
             )
 
-        # Check multimodal processing status - handle LightRAG's early DocStatus.PROCESSED marking
+        # 状态检查逻辑：处理 LightRAG 的“早熟”问题
         try:
             existing_doc_status = await self.lightrag.doc_status.get_by_id(doc_id)
             if existing_doc_status:
-                # Check if multimodal content is already processed
+                # 检查多模态内容是否已经处理过（通过自定义标签 multimodal_processed）
                 multimodal_processed = existing_doc_status.get(
                     "multimodal_processed", False
                 )
 
                 if multimodal_processed:
                     self.logger.info(
-                        f"Document {doc_id} multimodal content is already processed"
+                        f"文档 {doc_id} 的多模态内容之前已处理完成，跳过"
                     )
                     return
 
-                # Even if status is DocStatus.PROCESSED (text processing done),
-                # we still need to process multimodal content if not yet done
+                # 如果状态显示文本已处理完成 (DocStatus.PROCESSED)，但多模态还没做
                 doc_status = existing_doc_status.get("status", "")
                 if doc_status == DocStatus.PROCESSED and not multimodal_processed:
                     self.logger.info(
-                        f"Document {doc_id} text processing is complete, but multimodal content still needs processing"
+                        f"文档 {doc_id} 的文本处理已完成，但多模态内容仍需继续处理"
                     )
-                    # Continue with multimodal processing
+
+                # 如果状态显示文本和多模态都已处理完成
                 elif doc_status == DocStatus.PROCESSED and multimodal_processed:
                     self.logger.info(
-                        f"Document {doc_id} is fully processed (text + multimodal)"
+                        f"文档 {doc_id} 已完全处理（文本 + 多模态均完成）"
                     )
                     return
 
         except Exception as e:
-            self.logger.debug(f"Error checking document status for {doc_id}: {e}")
+            self.logger.debug(f"检查 {doc_id}状态时出错（可能是新文档）: {e}")
             # Continue with processing if cache check fails
 
         # Use ProcessorMixin's own batch processing that can handle multiple content types
-        log_message = "Starting multimodal content processing..."
+        log_message = "正在开始多模态内容处理..."
         self.logger.info(log_message)
         if pipeline_status_lock and pipeline_status:
             async with pipeline_status_lock:
@@ -612,23 +615,26 @@ class ProcessorMixin:
                 pipeline_status["history_messages"].append(log_message)
 
         try:
-            # Ensure LightRAG is initialized
+            # 确保 LightRAG 已准备就绪
             await self._ensure_lightrag_initialized()
 
+            # 调用“类型感知”的批量处理器，它能自动把图片发给图片专家，表格发给表格专家
             await self._process_multimodal_content_batch_type_aware(
                 multimodal_items=multimodal_items, file_path=file_path, doc_id=doc_id
             )
 
-            # Mark multimodal content as processed and update final status
+            # 标记该文档的多模态处理已正式完成
             await self._mark_multimodal_processing_complete(doc_id)
 
-            log_message = "Multimodal content processing complete"
+            log_message = "多模态内容处理完成"
             self.logger.info(log_message)
+            # 更新状态锁中的消息
             if pipeline_status_lock and pipeline_status:
                 async with pipeline_status_lock:
                     pipeline_status["latest_message"] = log_message
                     pipeline_status["history_messages"].append(log_message)
 
+            # 触发“多模态处理完成”回调
             if callback_manager is not None:
                 duration = time.time() - mm_start_time
                 callback_manager.dispatch(
@@ -640,14 +646,15 @@ class ProcessorMixin:
                 )
 
         except Exception as e:
-            self.logger.error(f"Error in multimodal processing: {e}")
+            # 异常处理：如果批量处理失败，尝试逐个处理（Fallback 机制）
+            self.logger.error(f"多模态处理过程中出错: {e}")
             # Fallback to individual processing if batch processing fails
-            self.logger.warning("Falling back to individual multimodal processing")
+            self.logger.warning("正在切换到单项逐个处理模式")
             await self._process_multimodal_content_individual(
                 multimodal_items, file_path, doc_id
             )
 
-            # Mark multimodal content as processed even after fallback
+            # 即便是保底方案跑完，也要标记为完成
             await self._mark_multimodal_processing_complete(doc_id)
 
     async def _process_multimodal_content_individual(
@@ -809,13 +816,13 @@ class ProcessorMixin:
             self, multimodal_items: List[Dict[str, Any]], file_path: str, doc_id: str
     ):
         """
-        Type-aware batch processing that selects correct processors based on content type.
-        This is the corrected implementation that handles different modality types properly.
+        类型感知的批量处理，根据内容类型选择正确的处理器。
+        这是处理不同模态类型的修正实现。
 
-        Args:
-            multimodal_items: List of multimodal items with different types
-            file_path: File path for citation
-            doc_id: Document ID for proper association
+        参数说明：
+            multimodal_items: 包含不同类型的多模态项目列表。
+            file_path: 用于引用溯源的文件路径。
+            doc_id: 用于确保正确关联的文档 ID。
         """
         if not multimodal_items:
             self.logger.debug("No multimodal content to process")
@@ -1605,7 +1612,9 @@ class ProcessorMixin:
                 doc_id = content_based_doc_id
 
             # 第二步：内容分类
-            # 将解析出的混合内容拆分为：1. 纯文本字符串  2. 多模态条目（图片/表格/公式对象）
+            # 将解析出的混合内容拆分为：
+            # text_content: 拼接后的完整文本字符串
+            # multimodal_items: 包含图片、表格、公式等非纯文本项的列表
             text_content, multimodal_items = separate_content(content_list)
 
             # 第2.5步：上下文感知设置
@@ -1623,7 +1632,7 @@ class ProcessorMixin:
             stage = "text_insert"  # 当前阶段标识：文本入库阶段
             if text_content.strip():
                 if file_name is None:
-                    # 获取引用文件名（全路径或仅文件名，取决于配置）
+                    # 获取引用文件名（全路径或仅文件名，取决于RagAnythingConfig.use_full_path）
                     file_name = self._get_file_reference(file_path)
 
                 # 触发“开始插入文本”的回调钩子
@@ -1654,7 +1663,7 @@ class ProcessorMixin:
                         doc_id=doc_id,
                     )
             else:
-                # Determine file reference even if no text content
+                # 如果文本内容为空，则确定文件引用名称
                 if file_name is None:
                     file_name = self._get_file_reference(file_path)
 

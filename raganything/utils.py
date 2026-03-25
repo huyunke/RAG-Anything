@@ -1,7 +1,7 @@
 """
-Utility functions for RAGAnything
+RAGAnything 工具函数库
 
-Contains helper functions for content separation, text insertion, and other utilities
+包含用于内容分离、文本插入及其他用途的辅助函数。
 """
 
 import base64
@@ -11,47 +11,52 @@ from lightrag.utils import logger
 
 
 def separate_content(
-    content_list: List[Dict[str, Any]],
+        content_list: List[Dict[str, Any]],
 ) -> Tuple[str, List[Dict[str, Any]]]:
     """
-    Separate text content and multimodal content
-
-    Args:
-        content_list: Content list from MinerU parsing
-
-    Returns:
-        (text_content, multimodal_items): Pure text content and multimodal items list
+    分离文本内容和多模态内容
+    参数说明：
+        content_list: 来自 MinerU 解析后的内容列表
+    返回：
+        (text_content, multimodal_items):
+            text_content: 拼接后的完整文本字符串
+            multimodal_items: 包含图片、表格、公式等非纯文本项的列表
     """
     text_parts = []
     multimodal_items = []
 
+    # 核心分拣循环：遍历每一个内容块
+    # content_list是一个列表，列表中的每一个元素都是一个字典
     for item in content_list:
+        # 获取当前块的类型，如果没有类型字段，默认视为 "text"
         content_type = item.get("type", "text")
 
         if content_type == "text":
-            # Text content
+            # 处理文本内容
             text = item.get("text", "")
+            # 只有当文本不是纯空格或空字符串时才收集
             if text.strip():
                 text_parts.append(text)
         else:
-            # Multimodal content (image, table, equation, etc.)
+            # 处理多模态内容（如：image, table, equation 等）
+            # 直接将整个字典对象存入多模态列表，保留其路径、坐标、属性等原始信息
             multimodal_items.append(item)
 
-    # Merge all text content
+    # 将所有收集到的文本片段用两个换行符连接起来，形成一篇完整的 Markdown 文档
     text_content = "\n\n".join(text_parts)
 
-    logger.info("Content separation complete:")
-    logger.info(f"  - Text content length: {len(text_content)} characters")
-    logger.info(f"  - Multimodal items count: {len(multimodal_items)}")
+    logger.info("内容分离完成：")
+    logger.info(f"  - 文本总长度:{len(text_content)} 个字符")
+    logger.info(f"  - 多模态项总数: {len(multimodal_items)}")
 
-    # Count multimodal types
+    # 统计多模态项的具体分布（例如：有多少张图，多少个表格）
     modal_types = {}
     for item in multimodal_items:
         modal_type = item.get("type", "unknown")
         modal_types[modal_type] = modal_types.get(modal_type, 0) + 1
 
     if modal_types:
-        logger.info(f"  - Multimodal type distribution: {modal_types}")
+        logger.info(f"  - 多模态类型分布情况: {modal_types}")
 
     return text_content, multimodal_items
 
@@ -144,29 +149,31 @@ def validate_image_file(image_path: str, max_size_mb: int = 50) -> bool:
 
 
 async def insert_text_content(
-    lightrag,
-    input: str | list[str],
-    split_by_character: str | None = None,
-    split_by_character_only: bool = False,
-    ids: str | list[str] | None = None,
-    file_paths: str | list[str] | None = None,
+        lightrag,
+        input: str | list[str],
+        split_by_character: str | None = None,
+        split_by_character_only: bool = False,
+        ids: str | list[str] | None = None,
+        file_paths: str | list[str] | None = None,
 ):
     """
-    Insert pure text content into LightRAG
+    将纯文本内容插入到 LightRAG 中
 
-    Args:
-        lightrag: LightRAG instance
-        input: Single document string or list of document strings
-        split_by_character: if split_by_character is not None, split the string by character, if chunk longer than
-        chunk_token_size, it will be split again by token size.
-        split_by_character_only: if split_by_character_only is True, split the string by character only, when
-        split_by_character is None, this parameter is ignored.
-        ids: single string of the document ID or list of unique document IDs, if not provided, MD5 hash IDs will be generated
-        file_paths: single string of the file path or list of file paths, used for citation
+    参数说明：
+        lightrag: LightRAG 实例（底层引擎）
+        input: 单个文档字符串或文档字符串列表（即你要存入的知识）
+        split_by_character: 如果不为 None，则按此字符（如换行符）切分字符串；
+                           如果切片后的长度超过了配置的 chunk_token_size（分片 Token 上限），
+                           它会根据 Token 大小再次进行细分
+        split_by_character_only: 如果为 True，则仅按照 split_by_character 字符切分
+                                不再进行二次 Token 切分。如果 split_by_character 为 None，此参数无效
+        ids: 单个文档 ID 或唯一文档 ID 列表。如果不提供，系统将自动生成基于 MD5 哈希的内容 ID
+        file_paths: 单个文件路径或路径列表，主要用于 AI 生成回答时的“引用溯源”
     """
-    logger.info("Starting text content insertion into LightRAG...")
+    logger.info("正在开始向 LightRAG 插入文本内容...")
 
-    # Use LightRAG's insert method with all parameters
+    # 调用 LightRAG 的异步插入方法 (ainsert)，并传入所有控制参数
+    # 这是真正的“入库”动作，涉及文本分段、向量化（Embedding）和存储
     await lightrag.ainsert(
         input=input,
         file_paths=file_paths,
@@ -175,18 +182,18 @@ async def insert_text_content(
         ids=ids,
     )
 
-    logger.info("Text content insertion complete")
+    logger.info("文本内容插入完成")
 
 
 async def insert_text_content_with_multimodal_content(
-    lightrag,
-    input: str | list[str],
-    multimodal_content: list[dict[str, any]] | None = None,
-    split_by_character: str | None = None,
-    split_by_character_only: bool = False,
-    ids: str | list[str] | None = None,
-    file_paths: str | list[str] | None = None,
-    scheme_name: str | None = None,
+        lightrag,
+        input: str | list[str],
+        multimodal_content: list[dict[str, any]] | None = None,
+        split_by_character: str | None = None,
+        split_by_character_only: bool = False,
+        ids: str | list[str] | None = None,
+        file_paths: str | list[str] | None = None,
+        scheme_name: str | None = None,
 ):
     """
     Insert pure text content into LightRAG

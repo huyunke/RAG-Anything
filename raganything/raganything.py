@@ -199,18 +199,20 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
         )
 
     def _initialize_processors(self):
-        """Initialize multimodal processors with appropriate model functions"""
+        """使用适当的模型函数初始化多模态处理器"""
+        # 依赖检查：必须先有 LightRAG 实例（底层数据库和基础能力），才能创建处理器
         if self.lightrag is None:
             raise ValueError(
-                "LightRAG instance must be initialized before creating processors"
+                "在创建处理器之前，必须先初始化 LightRAG 实例"
             )
 
-        # Create context extractor
+        # 创建上下文提取器：负责从文档中搜集背景信息
         self.context_extractor = self._create_context_extractor()
 
-        # Create different multimodal processors based on configuration
+        # 根据配置创建不同的多模态处理器
         self.modal_processors = {}
 
+        # 根据配置决定是否开启【图片处理器】
         if self.config.enable_image_processing:
             self.modal_processors["image"] = ImageModalProcessor(
                 lightrag=self.lightrag,
@@ -218,6 +220,7 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
                 context_extractor=self.context_extractor,
             )
 
+        # 根据配置决定是否开启【表格处理器】
         if self.config.enable_table_processing:
             self.modal_processors["table"] = TableModalProcessor(
                 lightrag=self.lightrag,
@@ -225,6 +228,7 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
                 context_extractor=self.context_extractor,
             )
 
+        # 根据配置决定是否开启【公式处理器】
         if self.config.enable_equation_processing:
             self.modal_processors["equation"] = EquationModalProcessor(
                 lightrag=self.lightrag,
@@ -232,16 +236,16 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
                 context_extractor=self.context_extractor,
             )
 
-        # Always include generic processor as fallback
+        # 始终包含一个“通用处理器”，用于处理那些无法归类的特殊内容块
         self.modal_processors["generic"] = GenericModalProcessor(
             lightrag=self.lightrag,
             modal_caption_func=self.llm_model_func,
             context_extractor=self.context_extractor,
         )
 
-        self.logger.info("Multimodal processors initialized with context support")
-        self.logger.info(f"Available processors: {list(self.modal_processors.keys())}")
-        self.logger.info(f"Context configuration: {self._create_context_config()}")
+        self.logger.info("多模态处理器初始化完成，并已支持上下文提取")
+        self.logger.info(f"可用处理器列表: {list(self.modal_processors.keys())}")
+        self.logger.info(f"上下文配置信息: {self._create_context_config()}")
 
     def update_config(self, **kwargs):
         """Update configuration with new values"""
@@ -272,13 +276,13 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
                 # LightRAG was pre-provided, but we need to ensure it's properly initialized
                 # Inherit model functions from LightRAG if not explicitly provided
                 if self.llm_model_func is None and hasattr(
-                    self.lightrag, "llm_model_func"
+                        self.lightrag, "llm_model_func"
                 ):
                     self.llm_model_func = self.lightrag.llm_model_func
                     self.logger.debug("Inherited llm_model_func from LightRAG instance")
 
                 if self.embedding_func is None and hasattr(
-                    self.lightrag, "embedding_func"
+                        self.lightrag, "embedding_func"
                 ):
                     self.embedding_func = self.lightrag.embedding_func
                     self.logger.debug("Inherited embedding_func from LightRAG instance")
@@ -286,8 +290,8 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
                 try:
                     # Ensure LightRAG storages are initialized
                     if (
-                        not hasattr(self.lightrag, "_storages_status")
-                        or self.lightrag._storages_status.name != "INITIALIZED"
+                            not hasattr(self.lightrag, "_storages_status")
+                            or self.lightrag._storages_status.name != "INITIALIZED"
                     ):
                         self.logger.info(
                             "Initializing storages for pre-provided LightRAG instance"
@@ -355,7 +359,7 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
                 k: v
                 for k, v in lightrag_params.items()
                 if not callable(v)
-                and k not in ["llm_model_kwargs", "vector_db_storage_cls_kwargs"]
+                   and k not in ["llm_model_kwargs", "vector_db_storage_cls_kwargs"]
             }
             self.logger.info(f"Initializing LightRAG with parameters: {log_params}")
 
@@ -500,7 +504,7 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
                 k: v
                 for k, v in self.lightrag_kwargs.items()
                 if not callable(v)
-                and k not in ["llm_model_kwargs", "vector_db_storage_cls_kwargs"]
+                   and k not in ["llm_model_kwargs", "vector_db_storage_cls_kwargs"]
             }
             config_info["lightrag_config"] = {
                 "custom_parameters": safe_kwargs,
@@ -515,31 +519,37 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
         return config_info
 
     def set_content_source_for_context(
-        self, content_source, content_format: str = "auto"
+            self, content_source, content_format: str = "auto"
     ):
-        """Set content source for context extraction in all modal processors
-
-        Args:
-            content_source: Source content for context extraction (e.g., MinerU content list)
-            content_format: Format of content source ("minerU", "text_chunks", "auto")
         """
+        为所有多模态处理器设置用于提取上下文的内容源。
+
+        参数说明：
+            content_source: 用于提取上下文的源内容（例如：MinerU 解析出的内容列表 content_list）。
+            content_format: 内容源的格式（可选："minerU", "text_chunks", "auto"）。
+        """
+
+        # 安全检查：如果没有初始化任何多模态处理器（如图片处理器、表格处理器），则无法设置
         if not self.modal_processors:
             self.logger.warning(
-                "Modal processors not initialized. Content source will be set when processors are created."
+                "多模态处理器尚未初始化。内容源将在处理器创建时再行设置"
             )
             return
 
+        # 遍历字典中所有的处理器
         for processor_name, processor in self.modal_processors.items():
             try:
+                # 调用每个处理器内部的 set_content_source 方法，把整份文档的信息同步过去
                 processor.set_content_source(content_source, content_format)
-                self.logger.debug(f"Set content source for {processor_name} processor")
+                self.logger.debug(f"已为 {processor_name} 处理器设置内容上下文源")
             except Exception as e:
+                # 如果某个处理器（比如公式处理器）同步失败，记录错误但不中断整体流程
                 self.logger.error(
-                    f"Failed to set content source for {processor_name}: {e}"
+                    f"为 {processor_name}设置内容源失败: {e}"
                 )
 
         self.logger.info(
-            f"Content source set for context extraction (format: {content_format})"
+            f"上下文提取的内容源已设置完成 (格式: {content_format})"
         )
 
     def update_context_config(self, **context_kwargs):
