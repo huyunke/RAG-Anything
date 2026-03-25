@@ -30,6 +30,7 @@ from dotenv import load_dotenv
 # 加载 .env 环境变量文件
 load_dotenv(dotenv_path=".env", override=False)
 
+
 # 日志配置
 def configure_logging():
     """为应用程序配置日志系统"""
@@ -86,14 +87,15 @@ def configure_logging():
     # 如果需要，启用详细调试模式
     set_verbose_debug(os.getenv("VERBOSE", "false").lower() == "true")
 
+
 # RAG 核心流程
 async def process_with_rag(
-    file_path: str,
-    output_dir: str,
-    api_key: str,
-    base_url: str = None,
-    working_dir: str = None,
-    parser: str = None,
+        file_path: str,
+        output_dir: str,
+        api_key: str,
+        base_url: str = None,
+        working_dir: str = None,
+        parser: str = None,
 ):
     """
     使用 RAGAnything 处理文档
@@ -112,9 +114,9 @@ async def process_with_rag(
             working_dir=working_dir or "./rag_storage",
             parser=parser,  # 解析器选择：mineru, docling, 或 paddleocr
             parse_method="auto",  # 解析方法：auto (自动), ocr, 或 txt
-            enable_image_processing=True,   # 启用图像处理
-            enable_table_processing=True,   # 启用表格处理
-            enable_equation_processing=True, # 启用公式处理
+            enable_image_processing=True,  # 启用图像处理
+            enable_table_processing=True,  # 启用表格处理
+            enable_equation_processing=True,  # 启用公式处理
         )
 
         # 定义 LLM 文本模型函数
@@ -131,12 +133,12 @@ async def process_with_rag(
 
         # 定义用于图像处理的视觉模型函数
         def vision_model_func(
-            prompt,
-            system_prompt=None,
-            history_messages=[],
-            image_data=None,
-            messages=None,
-            **kwargs,
+                prompt,
+                system_prompt=None,
+                history_messages=[],
+                image_data=None,
+                messages=None,
+                **kwargs,
         ):
             # 如果提供了 messages 格式（用于多模态 VLM 增强查询），直接使用它
             if messages:
@@ -185,12 +187,16 @@ async def process_with_rag(
                 return llm_model_func(prompt, system_prompt, history_messages, **kwargs)
 
         # 定义 Embedding 嵌入函数 - 使用环境变量进行配置
+        # embedding_dim (维度)：默认是 3072。给每个词定义了 3072 个维度的“特征”。维度越高，语义表达通常越精准
         embedding_dim = int(os.getenv("EMBEDDING_DIM", "3072"))
+        # text-embedding-3-large：一个强大的文本嵌入模型，用于将文本转换为数值向量
         embedding_model = os.getenv("EMBEDDING_MODEL", "text-embedding-3-large")
 
+        # 定义嵌入函数
         embedding_func = EmbeddingFunc(
-            embedding_dim=embedding_dim,
-            max_token_size=8192,
+            embedding_dim=embedding_dim,  # 嵌入向量的维度
+            max_token_size=8192,  # 最大 token 数量：规定了单次处理的最大字符量，如果超过这个数量，会被拆分为更小的块进行处理
+            # texts：要嵌入的文本列表
             func=lambda texts: openai_embed.func(
                 texts,
                 model=embedding_model,
@@ -201,13 +207,16 @@ async def process_with_rag(
 
         # 使用新的数据类结构初始化 RAGAnything
         rag = RAGAnything(
-            config=config,
-            llm_model_func=llm_model_func,
-            vision_model_func=vision_model_func,
-            embedding_func=embedding_func,
+            config=config,  # RAGAnything的配置，通过RAGAnythingConfig进行配置
+            llm_model_func=llm_model_func,  # LLM模型函数，用于文本分析
+            vision_model_func=vision_model_func,  # 视觉模型函数，用于图像分析
+            embedding_func=embedding_func,  # 嵌入函数，用于将文本转换为数值向量
         )
 
         # 处理文档（完整流水线：解析、分片、向量化存储）
+        # file_path: 文件路径
+        # output_dir: 输出目录
+        # parse_method: 解析方法，auto 自动选择
         await rag.process_document_complete(
             file_path=file_path, output_dir=output_dir, parse_method="auto"
         )

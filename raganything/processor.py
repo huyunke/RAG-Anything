@@ -42,7 +42,7 @@ class ProcessorMixin:
             return os.path.basename(file_path)
 
     def _generate_cache_key(
-        self, file_path: Path, parse_method: str = None, **kwargs
+            self, file_path: Path, parse_method: str = None, **kwargs
     ) -> str:
         """
         Generate cache key based on file path and parsing configuration
@@ -72,16 +72,16 @@ class ProcessorMixin:
             k: v
             for k, v in kwargs.items()
             if k
-            in [
-                "lang",
-                "device",
-                "start_page",
-                "end_page",
-                "formula",
-                "table",
-                "backend",
-                "source",
-            ]
+               in [
+                   "lang",
+                   "device",
+                   "start_page",
+                   "end_page",
+                   "formula",
+                   "table",
+                   "backend",
+                   "source",
+               ]
         }
         config_dict.update(relevant_kwargs)
 
@@ -93,45 +93,48 @@ class ProcessorMixin:
 
     def _generate_content_based_doc_id(self, content_list: List[Dict[str, Any]]) -> str:
         """
-        Generate doc_id based on document content
+        基于文档内容生成唯一的 doc_id（文档 ID）
 
-        Args:
-            content_list: Parsed content list
+        参数说明：
+            content_list: 已解析的内容列表（包含文字、图片、表格等块）
 
-        Returns:
-            str: Content-based document ID with doc- prefix
+        返回：
+            str: 带有 "doc-" 前缀的、基于内容生成的唯一标识字符串
         """
+        # # 导入 LightRAG 提供的 MD5 哈希计算工具（计算工具具体怎么工作我没看）
         from lightrag.utils import compute_mdhash_id
 
-        # Extract key content for ID generation
+        # 用于存放所有提取出的关键内容片段，最后合并计算哈希
         content_hash_data = []
 
         for item in content_list:
             if isinstance(item, dict):
-                # For text content, use the text
+                # 处理纯文本：直接使用去除首尾空格后的文字内容
                 if item.get("type") == "text" and item.get("text"):
                     content_hash_data.append(item["text"].strip())
-                # For other content types, use key identifiers
+                # 处理图片：使用图片的路径作为标识（路径变了，指纹就会变）
                 elif item.get("type") == "image" and item.get("img_path"):
                     content_hash_data.append(f"image:{item['img_path']}")
+                # 处理表格：使用表格的主体数据作为标识
                 elif item.get("type") == "table" and item.get("table_body"):
                     content_hash_data.append(f"table:{item['table_body']}")
+                # 处理公式：使用公式的文本作为标识
                 elif item.get("type") == "equation" and item.get("text"):
                     content_hash_data.append(f"equation:{item['text']}")
                 else:
-                    # For other types, use string representation
+                    # 处理其他未知类型：将其强制转为字符串作为标识
                     content_hash_data.append(str(item))
 
-        # Create a content signature
+        # 将所有提取到的关键片段用换行符连接，形成该文档的“内容签名”
         content_signature = "\n".join(content_hash_data)
 
-        # Generate doc_id from content
+        # 通过 MD5 算法将长长的签名转换成一个短小且唯一的哈希 ID
         doc_id = compute_mdhash_id(content_signature, prefix="doc-")
 
         return doc_id
 
     async def _get_cached_result(
-        self, cache_key: str, file_path: Path, parse_method: str = None, **kwargs
+            self, cache_key: str, file_path: Path, parse_method: str = None, **kwargs
     ) -> tuple[List[Dict[str, Any]], str] | None:
         """
         Get cached parsing result if available and valid
@@ -173,16 +176,16 @@ class ProcessorMixin:
                 k: v
                 for k, v in kwargs.items()
                 if k
-                in [
-                    "lang",
-                    "device",
-                    "start_page",
-                    "end_page",
-                    "formula",
-                    "table",
-                    "backend",
-                    "source",
-                ]
+                   in [
+                       "lang",
+                       "device",
+                       "start_page",
+                       "end_page",
+                       "formula",
+                       "table",
+                       "backend",
+                       "source",
+                   ]
             }
             current_config.update(relevant_kwargs)
 
@@ -210,13 +213,13 @@ class ProcessorMixin:
         return None
 
     async def _store_cached_result(
-        self,
-        cache_key: str,
-        content_list: List[Dict[str, Any]],
-        doc_id: str,
-        file_path: Path,
-        parse_method: str = None,
-        **kwargs,
+            self,
+            cache_key: str,
+            content_list: List[Dict[str, Any]],
+            doc_id: str,
+            file_path: Path,
+            parse_method: str = None,
+            **kwargs,
     ) -> None:
         """
         Store parsing result in cache
@@ -247,16 +250,16 @@ class ProcessorMixin:
                 k: v
                 for k, v in kwargs.items()
                 if k
-                in [
-                    "lang",
-                    "device",
-                    "start_page",
-                    "end_page",
-                    "formula",
-                    "table",
-                    "backend",
-                    "source",
-                ]
+                   in [
+                       "lang",
+                       "device",
+                       "start_page",
+                       "end_page",
+                       "formula",
+                       "table",
+                       "backend",
+                       "source",
+                   ]
             }
             parse_config.update(relevant_kwargs)
 
@@ -278,43 +281,51 @@ class ProcessorMixin:
             self.logger.warning(f"Error storing to parse cache: {e}")
 
     async def parse_document(
-        self,
-        file_path: str,
-        output_dir: str = None,
-        parse_method: str = None,
-        display_stats: bool = None,
-        **kwargs,
+            self,
+            file_path: str,
+            output_dir: str = None,
+            parse_method: str = None,
+            display_stats: bool = None,
+            **kwargs,
     ) -> tuple[List[Dict[str, Any]], str]:
         """
-        Parse document with caching support
+        带缓存支持的文档解析函数
 
-        Args:
-            file_path: Path to the file to parse
-            output_dir: Output directory (defaults to config.parser_output_dir)
-            parse_method: Parse method (defaults to config.parse_method)
-            display_stats: Whether to display content statistics (defaults to config.display_content_stats)
-            **kwargs: Additional parameters for parser (e.g., lang, device, start_page, end_page, formula, table, backend, source)
+        参数说明：
+            file_path: 待解析文件的路径
+            output_dir: 输出目录（默认为配置中的 config.parser_output_dir）
+            parse_method: 解析方法（默认为配置中的 config.parse_method）
+            display_stats: 是否显示内容统计信息（默认为配置中的 config.display_content_stats）
+            **kwargs: 传递给解析器的额外参数（如语言、设备、起始页码、是否开启公式/表格识别等）
 
-        Returns:
-            tuple[List[Dict[str, Any]], str]: (content_list, doc_id)
+        返回：
+            tuple[List[Dict[str, Any]], str]: (内容块列表, 文档唯一ID)
         """
-        # Use config defaults if not provided
+
+        # 初始化：如果调用时没传参数，则使用 config.py 里的默认值
         if output_dir is None:
+            # 默认值./output
             output_dir = self.config.parser_output_dir
         if parse_method is None:
+            # 默认值auto
             parse_method = self.config.parse_method
         if display_stats is None:
+            # 默认值True
             display_stats = self.config.display_content_stats
 
-        self.logger.info(f"Starting document parsing: {file_path}")
+        self.logger.info(f"正在启动文档解析: {file_path}")
 
-        file_path = Path(file_path)
+        # 检查文件是否存在
+        file_path = Path(file_path)  # 将文件路径转换为 Path 对象，以便后续操作
         if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+            raise FileNotFoundError(f"找不到文件: {file_path}")
 
+        # 回调管理器，用于监控进度
         callback_file = str(file_path)
         callback_manager = getattr(self, "callback_manager", None)
         parse_start_time = time.time()
+
+        # 触发“解析开始”的回调函数（用于界面进度条或日志记录）
         if callback_manager is not None:
             callback_manager.dispatch(
                 "on_parse_start",
@@ -322,20 +333,24 @@ class ProcessorMixin:
                 parser=self.config.parser,
             )
 
-        # Generate cache key based on file and configuration
+        # 缓存检查：这是为了省钱省时间。如果文件没变，直接用上次解析的结果
+        # 生成缓存键（基于文件内容、解析方法和参数）
         cache_key = self._generate_cache_key(file_path, parse_method, **kwargs)
 
-        # Check cache first
+        # 尝试从磁盘或内存获取已有的解析结果
         cached_result = await self._get_cached_result(
             cache_key, file_path, parse_method, **kwargs
         )
+
+        # 如果缓存有效，则直接返回缓存结果
         if cached_result is not None:
             content_list, doc_id = cached_result
-            self.logger.info(f"Using cached parsing result for: {file_path}")
+            self.logger.info(f"发现有效缓存，直接使用缓存结果: {file_path}")
             if display_stats:
                 self.logger.info(
-                    f"* Total blocks in cached content_list: {len(content_list)}"
+                    f"* 缓存内容块总数: {len(content_list)}"
                 )
+            # 触发“解析完成”回调
             if callback_manager is not None:
                 duration = time.time() - parse_start_time
                 callback_manager.dispatch(
@@ -347,22 +362,27 @@ class ProcessorMixin:
                 )
             return content_list, doc_id
 
-        # Choose appropriate parsing method based on file extension
+        # 解析器选择：根据文件后缀名（.pdf, .docx 等）决定用哪个方法
+        # ext: 文件后缀名，如 .pdf, .docx 等
         ext = file_path.suffix.lower()
 
         try:
             doc_parser = getattr(self, "doc_parser", None)
             if doc_parser is None:
+                # 动态加载解析器（如 MinerU 或 PaddleOCR）
                 doc_parser = get_parser(self.config.parser)
                 self.doc_parser = doc_parser
 
-            # Log parser and method information
+            # 记录日志
             self.logger.info(
-                f"Using {self.config.parser} parser with method: {parse_method}"
+                f"正在使用 {self.config.parser} 解析器，方法模式为: {parse_method}"
             )
 
+            # 情况1：PDF 文件处理
             if ext in [".pdf"]:
-                self.logger.info("Detected PDF file, using parser for PDF...")
+                self.logger.info("检测到 PDF 文件，正在调用 PDF 专用解析流程...")
+                # 确保 parse_pdf 是异步执行，在独立线程运行，防止阻塞主异步循环
+                # content_list: 解析出的内容列表
                 content_list = await asyncio.to_thread(
                     doc_parser.parse_pdf,
                     pdf_path=file_path,
@@ -370,6 +390,7 @@ class ProcessorMixin:
                     method=parse_method,
                     **kwargs,
                 )
+            # 情况2：图片文件处理
             elif ext in [
                 ".jpg",
                 ".jpeg",
@@ -380,8 +401,10 @@ class ProcessorMixin:
                 ".gif",
                 ".webp",
             ]:
-                self.logger.info("Detected image file, using parser for images...")
+                self.logger.info("检测到图像文件，正在调用图像解析流程...")
                 try:
+                    # 确保 parse_image 是异步执行，在独立线程运行，防止阻塞主异步循环
+                    # content_list: 解析出的内容列表
                     content_list = await asyncio.to_thread(
                         doc_parser.parse_image,
                         image_path=file_path,
@@ -389,41 +412,49 @@ class ProcessorMixin:
                         **kwargs,
                     )
                 except NotImplementedError:
-                    # Fallback to MinerU for image parsing if current parser doesn't support it
+                    # 如果当前解析器不支持图片，则强制降级使用 MinerU 处理
                     self.logger.warning(
-                        f"{self.config.parser} parser doesn't support image parsing, falling back to MinerU"
+                        f"{self.config.parser} 解析器不支持图片解析，正在回退至 MinerU"
                     )
+                    # 确保 parse_image 是异步执行，在独立线程运行，防止阻塞主异步循环
+                    # content_list: 解析出的内容列表
                     content_list = await asyncio.to_thread(
                         MineruParser().parse_image,
                         image_path=file_path,
                         output_dir=output_dir,
                         **kwargs,
                     )
+            # 情况3：Office 文件,html文件处理
             elif ext in [
                 ".doc",
-                ".docx",
+                ".docx",  # 赛题要求解析的文档类型之一
                 ".ppt",
                 ".pptx",
                 ".xls",
-                ".xlsx",
+                ".xlsx",  # 赛题要求解析的文档类型之一
                 ".html",
                 ".htm",
                 ".xhtml",
             ]:
                 self.logger.info(
-                    "Detected Office or HTML document, using parser for Office/HTML..."
+                    "检测到 Office 或 HTML 文档，正在调用对应的解析流程..."
                 )
+                # 确保 parse_office_doc 是异步执行，在独立线程运行，防止阻塞主异步循环
+                # content_list: 解析出的内容列表
                 content_list = await asyncio.to_thread(
                     doc_parser.parse_office_doc,
                     doc_path=file_path,
                     output_dir=output_dir,
                     **kwargs,
                 )
+            # 情况4：其他文件处理
             else:
-                # For other or unknown formats, use generic parser
+                # 对于其他或未知的格式，使用通用解析器
                 self.logger.info(
-                    f"Using generic parser for {ext} file (method={parse_method})..."
+                    f"针对 {ext} 文件使用通用解析逻辑 (模式={parse_method})..."
                 )
+                # 确保 parse_document 是异步执行，在独立线程运行，防止阻塞主异步循环
+                # content_list: 解析出的内容列表
                 content_list = await asyncio.to_thread(
                     doc_parser.parse_document,
                     file_path=file_path,
@@ -433,7 +464,8 @@ class ProcessorMixin:
                 )
 
         except MineruExecutionError as e:
-            self.logger.error(f"Mineru command failed: {e}")
+            self.logger.error(f"MinerU 执行指令失败: {e}")
+            # 如果报错了，通过回调通知外部
             if callback_manager is not None:
                 callback_manager.dispatch(
                     "on_parse_error",
@@ -444,7 +476,7 @@ class ProcessorMixin:
             raise
         except Exception as e:
             self.logger.error(
-                f"Error during parsing with {self.config.parser} parser: {str(e)}"
+                f"使用 {self.config.parser} 解析时发生未知错误: {str(e)}"
             )
             if callback_manager is not None:
                 callback_manager.dispatch(
@@ -455,56 +487,63 @@ class ProcessorMixin:
                 )
             raise
 
-        msg = f"Parsing {file_path} complete! Extracted {len(content_list)} content blocks"
+        # 解析完成，进行结果处理，生成doc_id并保存缓存
+        msg = f"文件 {file_path} 解析完成！共提取到 {len(content_list)} 个内容块"
         self.logger.info(msg)
 
         if len(content_list) == 0:
-            raise ValueError("Parsing failed: No content was extracted")
+            raise ValueError("解析失败：未提取到任何内容")
 
-        # Generate doc_id based on content
+        # 根据解析出的内容生成唯一的 doc_id
         doc_id = self._generate_content_based_doc_id(content_list)
 
-        # Store result in cache
+        # 将结果存入缓存，下次再跑同样的文件就秒开了
         await self._store_cached_result(
             cache_key, content_list, doc_id, file_path, parse_method, **kwargs
         )
 
-        # Display content statistics if requested
+        # 统计展示：如果display_stats = True，控制台会打印出具体提取到了多少文字、表格和图片
         if display_stats:
-            self.logger.info("\nContent Information:")
-            self.logger.info(f"* Total blocks in content_list: {len(content_list)}")
+            self.logger.info("\n内容提取概况:")
+            self.logger.info(f"* 内容块总数: {len(content_list)}")
 
-            # Count elements by type
+            # 按内容类型（text, image, table 等）进行分类统计
             block_types: Dict[str, int] = {}
             for block in content_list:
+                # 确保每一个块都是字典格式
                 if isinstance(block, dict):
+                    # 获取块的类型，拿不到就标记为 unknown
                     block_type = block.get("type", "unknown")
                     if isinstance(block_type, str):
+                        # 核心计数逻辑：如果类型已存在，数量+1；如果第一次出现，设为 1
                         block_types[block_type] = block_types.get(block_type, 0) + 1
 
-            self.logger.info("* Content block types:")
+            self.logger.info("* 各类内容块分布:")
             for block_type, count in block_types.items():
                 self.logger.info(f"  - {block_type}: {count}")
 
+        # 最终完成回调
+        # 检查是否配置了回调管理器（如果没人监听，就不发通知）
         if callback_manager is not None:
+            # 计算整个解析阶段耗费了多少秒
             duration = time.time() - parse_start_time
             callback_manager.dispatch(
-                "on_parse_complete",
-                file_path=callback_file,
-                content_blocks=len(content_list),
-                doc_id=doc_id,
-                duration_seconds=duration,
+                "on_parse_complete",  # 事件名称
+                file_path=callback_file,  # 告诉外部哪个文件解析完成了
+                content_blocks=len(content_list),  # 告诉外部解析出了多少个内容块
+                doc_id=doc_id,  # 告诉外部生成的 doc_id 是什么
+                duration_seconds=duration,  # 告诉外部解析花了多少秒
             )
 
         return content_list, doc_id
 
     async def _process_multimodal_content(
-        self,
-        multimodal_items: List[Dict[str, Any]],
-        file_path: str,
-        doc_id: str,
-        pipeline_status: Optional[Any] = None,
-        pipeline_status_lock: Optional[Any] = None,
+            self,
+            multimodal_items: List[Dict[str, Any]],
+            file_path: str,
+            doc_id: str,
+            pipeline_status: Optional[Any] = None,
+            pipeline_status_lock: Optional[Any] = None,
     ):
         """
         Process multimodal content (using specialized processors)
@@ -612,7 +651,7 @@ class ProcessorMixin:
             await self._mark_multimodal_processing_complete(doc_id)
 
     async def _process_multimodal_content_individual(
-        self, multimodal_items: List[Dict[str, Any]], file_path: str, doc_id: str
+            self, multimodal_items: List[Dict[str, Any]], file_path: str, doc_id: str
     ):
         """
         Process multimodal content individually (fallback method)
@@ -666,7 +705,7 @@ class ProcessorMixin:
                         batch_mode=True,
                         doc_id=doc_id,  # Pass doc_id for proper association
                         chunk_order_index=existing_chunks_count
-                        + i,  # Proper order index
+                                          + i,  # Proper order index
                     )
 
                     # Collect chunk results for batch processing
@@ -767,7 +806,7 @@ class ProcessorMixin:
         await self._mark_multimodal_processing_complete(doc_id)
 
     async def _process_multimodal_content_batch_type_aware(
-        self, multimodal_items: List[Dict[str, Any]], file_path: str, doc_id: str
+            self, multimodal_items: List[Dict[str, Any]], file_path: str, doc_id: str
     ):
         """
         Type-aware batch processing that selects correct processors based on content type.
@@ -804,7 +843,7 @@ class ProcessorMixin:
 
         # Stage 1: Concurrent generation of descriptions using correct processors for each type
         async def process_single_item_with_correct_processor(
-            item: Dict[str, Any], index: int, file_path: str
+                item: Dict[str, Any], index: int, file_path: str
         ):
             """Process single item using the correct processor for its type"""
             nonlocal completed_count
@@ -844,8 +883,8 @@ class ProcessorMixin:
                     async with progress_lock:
                         completed_count += 1
                         if (
-                            completed_count % max(1, total_items // 10) == 0
-                            or completed_count == total_items
+                                completed_count % max(1, total_items // 10) == 0
+                                or completed_count == total_items
                         ):
                             progress_percent = (completed_count / total_items) * 100
                             self.logger.info(
@@ -869,8 +908,8 @@ class ProcessorMixin:
                     async with progress_lock:
                         completed_count += 1
                         if (
-                            completed_count % max(1, total_items // 10) == 0
-                            or completed_count == total_items
+                                completed_count % max(1, total_items // 10) == 0
+                                or completed_count == total_items
                         ):
                             progress_percent = (completed_count / total_items) * 100
                             self.logger.info(
@@ -944,7 +983,7 @@ class ProcessorMixin:
         await self._update_doc_status_with_chunks_type_aware(doc_id, chunk_ids)
 
     def _convert_to_lightrag_chunks_type_aware(
-        self, multimodal_data_list: List[Dict[str, Any]], file_path: str, doc_id: str
+            self, multimodal_data_list: List[Dict[str, Any]], file_path: str, doc_id: str
     ) -> Dict[str, Any]:
         """Convert multimodal data to LightRAG standard chunks format"""
 
@@ -992,7 +1031,7 @@ class ProcessorMixin:
         return chunks
 
     def _apply_chunk_template(
-        self, content_type: str, original_item: Dict[str, Any], description: str
+            self, content_type: str, original_item: Dict[str, Any], description: str
     ) -> str:
         """
         Apply the appropriate chunk template based on content type
@@ -1067,7 +1106,7 @@ class ProcessorMixin:
             return description
 
     async def _store_chunks_to_lightrag_storage_type_aware(
-        self, chunks: Dict[str, Any]
+            self, chunks: Dict[str, Any]
     ):
         """Store chunks to storage"""
         try:
@@ -1084,11 +1123,11 @@ class ProcessorMixin:
             raise
 
     async def _store_multimodal_main_entities(
-        self,
-        multimodal_data_list: List[Dict[str, Any]],
-        lightrag_chunks: Dict[str, Any],
-        file_path: str,
-        doc_id: str = None,
+            self,
+            multimodal_data_list: List[Dict[str, Any]],
+            lightrag_chunks: Dict[str, Any],
+            file_path: str,
+            doc_id: str = None,
     ):
         """
         Store multimodal main entities to entities_vdb and full_entities.
@@ -1178,7 +1217,7 @@ class ProcessorMixin:
                 raise
 
     async def _store_multimodal_entities_to_full_entities(
-        self, entities_to_store: Dict[str, Any], doc_id: str
+            self, entities_to_store: Dict[str, Any], doc_id: str
     ):
         """
         Store multimodal main entities to full_entities storage.
@@ -1238,7 +1277,7 @@ class ProcessorMixin:
             raise
 
     async def _batch_extract_entities_lightrag_style_type_aware(
-        self, lightrag_chunks: Dict[str, Any]
+            self, lightrag_chunks: Dict[str, Any]
     ) -> List[Tuple]:
         """Use LightRAG's extract_entities for batch entity relation extraction"""
         from lightrag.kg.shared_storage import (
@@ -1267,7 +1306,7 @@ class ProcessorMixin:
         return chunk_results
 
     async def _batch_add_belongs_to_relations_type_aware(
-        self, chunk_results: List[Tuple], multimodal_data_list: List[Dict[str, Any]]
+            self, chunk_results: List[Tuple], multimodal_data_list: List[Dict[str, Any]]
     ) -> List[Tuple]:
         """Add belongs_to relations for multimodal entities"""
         # Create mapping from chunk_id to modal_entity_name
@@ -1331,7 +1370,7 @@ class ProcessorMixin:
         return enhanced_chunk_results
 
     async def _batch_merge_lightrag_style_type_aware(
-        self, enhanced_chunk_results: List[Tuple], file_path: str, doc_id: str = None
+            self, enhanced_chunk_results: List[Tuple], file_path: str, doc_id: str = None
     ):
         """Use LightRAG's merge_nodes_and_edges for batch merge"""
         from lightrag.kg.shared_storage import (
@@ -1366,7 +1405,7 @@ class ProcessorMixin:
         await self.lightrag._insert_done()
 
     async def _update_doc_status_with_chunks_type_aware(
-        self, doc_id: str, chunk_ids: List[str]
+            self, doc_id: str, chunk_ids: List[str]
     ):
         """Update document status with multimodal chunks"""
         try:
@@ -1506,75 +1545,88 @@ class ProcessorMixin:
             }
 
     async def process_document_complete(
-        self,
-        file_path: str,
-        output_dir: str = None,
-        parse_method: str = None,
-        display_stats: bool = None,
-        split_by_character: str | None = None,
-        split_by_character_only: bool = False,
-        doc_id: str | None = None,
-        file_name: str | None = None,
-        **kwargs,
+            self,
+            file_path: str,
+            output_dir: str = None,
+            parse_method: str = None,
+            display_stats: bool = None,
+            split_by_character: str | None = None,
+            split_by_character_only: bool = False,
+            doc_id: str | None = None,
+            file_name: str | None = None,
+            **kwargs,
     ):
         """
-        Complete document processing workflow
+        完整文档处理流水线
 
-        Args:
-            file_path: Path to the file to process
-            output_dir: output directory (defaults to config.parser_output_dir)
-            parse_method: Parse method (defaults to config.parse_method)
-            display_stats: Whether to display content statistics (defaults to config.display_content_stats)
-            split_by_character: Optional character to split the text by
-            split_by_character_only: If True, split only by the specified character
-            doc_id: Optional document ID, if not provided will be generated from content
-            **kwargs: Additional parameters for parser (e.g., lang, device, start_page, end_page, formula, table, backend, source)
+        参数说明：
+            file_path: 待处理文件的路径
+            output_dir: 输出目录（默认为配置中的 config.parser_output_dir）
+            parse_method: 解析方法（默认为配置中的 config.parse_method，如 'auto', 'ocr'）
+            display_stats: 是否显示内容统计信息（默认为配置中的 config.display_content_stats）
+            split_by_character: 可选的特定分隔符，用于对提取出的文本进行切分
+            split_by_character_only: 如果设为 True，则仅使用指定的字符进行切分，忽略默认切分规则
+            doc_id: 可选的文档 ID。如果不提供，系统会根据文件内容自动生成唯一的 ID
+            **kwargs: 解析器的额外参数。例如：lang（语言）、device（设备，如 cpu/cuda）、start_page/end_page（起始/结束页码）、
+            formula（公式识别开关）、table（表格识别开关）、backend（后端引擎）、source（来源标识）。
         """
-        callback_manager = getattr(self, "callback_manager", None)
-        doc_start_time = time.time()
-        stage = "parse"
+
+        callback_manager = getattr(self, "callback_manager", None)  # 获取回调管理器，用于监控进度
+        doc_start_time = time.time()  # 记录开始时间
+        stage = "parse"  # 当前阶段标识：解析阶段
 
         try:
-            # Ensure LightRAG is initialized
+            # 确保底层 LightRAG 引擎已初始化（如向量数据库连接等）
             await self._ensure_lightrag_initialized()
 
-            # Use config defaults if not provided
+            # 如果调用时没传参数，则使用配置文件中的默认值
             if output_dir is None:
+                # 默认值./output
                 output_dir = self.config.parser_output_dir
             if parse_method is None:
+                # 默认值auto
                 parse_method = self.config.parse_method
             if display_stats is None:
+                # 默认值True
                 display_stats = self.config.display_content_stats
 
-            self.logger.info(f"Starting complete document processing: {file_path}")
+            self.logger.info(f"正在启动完整文档处理流程: {file_path}")
 
-            # Step 1: Parse document
+            # 第一步：解析文档
+            # 调用具体的 parse_document 方法，将文件转为统一的列表格式，实现细节在 parser.py 中
+            # content_list: MinerU 解析出的内容列表
+            # content_based_doc_id: 基于内容生成的文档 ID
             content_list, content_based_doc_id = await self.parse_document(
                 file_path, output_dir, parse_method, display_stats, **kwargs
             )
 
-            # Use provided doc_id or fall back to content-based doc_id
+            # 确定文档唯一标识 ID（如果没传，则使用基于内容的哈希 ID，防止重复入库）
             if doc_id is None:
                 doc_id = content_based_doc_id
 
-            # Step 2: Separate text and multimodal content
+            # 第二步：内容分类
+            # 将解析出的混合内容拆分为：1. 纯文本字符串  2. 多模态条目（图片/表格/公式对象）
             text_content, multimodal_items = separate_content(content_list)
 
-            # Step 2.5: Set content source for context extraction in multimodal processing
+            # 第2.5步：上下文感知设置
+            # 为多模态处理设置内容来源。这是为了让 AI 知道图片出现在哪一页、哪段文字附近
+            # 这样 AI 就能根据上下文理解图片的内容，而不是孤立地看
             if hasattr(self, "set_content_source_for_context") and multimodal_items:
                 self.logger.info(
-                    "Setting content source for context-aware multimodal processing..."
+                    "正在为多模态处理设置上下文来源..."
                 )
                 self.set_content_source_for_context(
                     content_list, self.config.content_format
                 )
 
-            # Step 3: Insert pure text content with all parameters
-            stage = "text_insert"
+            # 第三步：纯文本内容入库
+            stage = "text_insert"  # 当前阶段标识：文本入库阶段
             if text_content.strip():
                 if file_name is None:
-                    # Use full path or basename based on config
+                    # 获取引用文件名（全路径或仅文件名，取决于配置）
                     file_name = self._get_file_reference(file_path)
+
+                # 触发“开始插入文本”的回调钩子
                 if callback_manager is not None:
                     callback_manager.dispatch(
                         "on_text_insert_start",
@@ -1583,6 +1635,7 @@ class ProcessorMixin:
                         doc_id=doc_id,
                     )
                 insert_start = time.time()
+                # 将文本切片并转化为向量，存入向量数据库
                 await insert_text_content(
                     self.lightrag,
                     input=text_content,
@@ -1591,6 +1644,7 @@ class ProcessorMixin:
                     split_by_character_only=split_by_character_only,
                     ids=doc_id,
                 )
+                # 触发“文本插入完成”的回调，记录耗时
                 if callback_manager is not None:
                     insert_duration = time.time() - insert_start
                     callback_manager.dispatch(
@@ -1604,21 +1658,23 @@ class ProcessorMixin:
                 if file_name is None:
                     file_name = self._get_file_reference(file_path)
 
-            # Step 4: Process multimodal content (using specialized processors)
-            stage = "multimodal"
+            # 第四步：多模态内容处理
+            stage = "multimodal"  # 当前阶段标识：多模态处理阶段
             if multimodal_items:
+                # 处理多模态内容
                 await self._process_multimodal_content(
                     multimodal_items, file_name, doc_id
                 )
             else:
-                # If no multimodal content, mark multimodal processing as complete
-                # This ensures the document status properly reflects completion of all processing
+                # 如果文档中没有多模态内容，则标记多模态处理已完成
+                # 这确保文档状态正确地反映了所有处理的完成情况
                 await self._mark_multimodal_processing_complete(doc_id)
                 self.logger.debug(
-                    f"No multimodal content found in document {doc_id}, "
-                    "marked multimodal processing as complete",
+                    f"文档 {doc_id}, "
+                    "中未发现多模态内容，已标记处理完成",
                 )
 
+        # 异常捕获：如果处理失败，通知回调管理器具体的失败阶段（parse/text_insert/multimodal）
         except Exception as exc:
             if callback_manager is not None:
                 callback_manager.dispatch(
@@ -1628,9 +1684,10 @@ class ProcessorMixin:
                     stage=stage,
                     error=exc,
                 )
-            raise
+            raise  # 重新抛出异常供上层处理
 
-        self.logger.info(f"Document {file_path} processing complete!")
+        self.logger.info(f"文档 {file_path} 处理全部完成！")
+        # 记录总耗时并触发完成回调
         if callback_manager is not None:
             duration = time.time() - doc_start_time
             callback_manager.dispatch(
@@ -1641,17 +1698,17 @@ class ProcessorMixin:
             )
 
     async def process_document_complete_lightrag_api(
-        self,
-        file_path: str,
-        output_dir: str = None,
-        parse_method: str = None,
-        display_stats: bool = None,
-        split_by_character: str | None = None,
-        split_by_character_only: bool = False,
-        doc_id: str | None = None,
-        scheme_name: str | None = None,
-        parser: str | None = None,
-        **kwargs,
+            self,
+            file_path: str,
+            output_dir: str = None,
+            parse_method: str = None,
+            display_stats: bool = None,
+            split_by_character: str | None = None,
+            split_by_character_only: bool = False,
+            doc_id: str | None = None,
+            scheme_name: str | None = None,
+            parser: str | None = None,
+            **kwargs,
     ):
         """
         API exclusively for LightRAG calls: Complete document processing workflow
@@ -1866,13 +1923,13 @@ class ProcessorMixin:
                 pipeline_status["history_messages"].append("Now is allowed to scan")
 
     async def insert_content_list(
-        self,
-        content_list: List[Dict[str, Any]],
-        file_path: str = "unknown_document",
-        split_by_character: str | None = None,
-        split_by_character_only: bool = False,
-        doc_id: str | None = None,
-        display_stats: bool = None,
+            self,
+            content_list: List[Dict[str, Any]],
+            file_path: str = "unknown_document",
+            split_by_character: str | None = None,
+            split_by_character_only: bool = False,
+            doc_id: str | None = None,
+            display_stats: bool = None,
     ):
         """
         Insert content list directly without document parsing
