@@ -13,6 +13,19 @@ Features demonstrated:
 - File filtering and directory processing
 """
 
+"""
+批量处理演示
+
+这个示例演示了如何使用批量处理功能来并行处理多个文档以提高吞吐量
+
+演示的功能：
+- 使用 BatchParser 进行基本批量处理
+- 异步批量处理
+- 与 RAG-Anything 的集成
+- 错误处理和进度跟踪
+- 文件过滤和目录处理
+"""
+
 import asyncio
 import logging
 from pathlib import Path
@@ -20,6 +33,7 @@ import tempfile
 import time
 
 # Add project root directory to Python path
+# 将项目根目录添加到 Python 路径中
 import sys
 
 sys.path.append(str(Path(__file__).parent.parent))
@@ -27,12 +41,13 @@ sys.path.append(str(Path(__file__).parent.parent))
 from raganything import RAGAnything, RAGAnythingConfig
 from raganything.batch_parser import BatchParser
 
-
+# 生成用于批量处理测试的示例文档
 def create_sample_documents():
     """Create sample documents for batch processing testing"""
-    temp_dir = Path(tempfile.mkdtemp())
+    temp_dir = Path(tempfile.mkdtemp()) # 创建临时目录
     sample_files = []
 
+    # 创建各种文档类型，包括三个文本文档，两个Markdown文档(里面带多个#指的是markdown的标题以及相应内容，这里不做翻译)
     # Create various document types
     documents = {
         "document1.txt": "This is a simple text document for testing batch processing.",
@@ -97,15 +112,16 @@ Continue development and testing of batch processing features.
     }
 
     # Create files
+    # 创建测试文件
     for filename, content in documents.items():
-        file_path = temp_dir / filename
+        file_path = temp_dir / filename # 拼接得到文件的完整路径(这里的/指的是路径拼接，不是除法)
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        sample_files.append(str(file_path))
+            f.write(content) # 写入文件内容
+        sample_files.append(str(file_path)) # 将文件路径添加到列表中
 
-    return sample_files, temp_dir
+    return sample_files, temp_dir # 返回文件路径列表和临时目录路径
 
-
+# 基础批量处理演示
 def demonstrate_basic_batch_processing():
     """Demonstrate basic batch processing functionality"""
     print("\n" + "=" * 60)
@@ -113,20 +129,24 @@ def demonstrate_basic_batch_processing():
     print("=" * 60)
 
     # Create sample documents
+    # 调用上面的函数创建示例文档
     sample_files, temp_dir = create_sample_documents()
 
     try:
+        # 打印示例文件信息
         print(f"Created {len(sample_files)} sample documents in: {temp_dir}")
         for file_path in sample_files:
             print(f"  - {Path(file_path).name}")
 
         # Create batch parser
+        # 创建批量解析器实例，配置解析器类型、并行工作线程数、进度显示和超时时间等参数
         batch_parser = BatchParser(
             parser_type="mineru",
             max_workers=3,
             show_progress=True,
             timeout_per_file=60,
-            skip_installation_check=True,  # Skip installation check for demo
+            skip_installation_check=True,  # 演示时跳过安装校验
+
         )
 
         print("\nBatch parser configured:")
@@ -136,16 +156,19 @@ def demonstrate_basic_batch_processing():
         print("  - Timeout per file: 60 seconds")
 
         # Check supported extensions
+        # 获取并打印可处理的文件名后缀
         supported_extensions = batch_parser.get_supported_extensions()
         print(f"  - Supported extensions: {supported_extensions}")
 
         # Filter files to supported types
+        # 从所有文件中过滤出支持的文件，并打印过滤结果
         supported_files = batch_parser.filter_supported_files(sample_files)
         print("\nFile filtering results:")
         print(f"  - Total files: {len(sample_files)}")
         print(f"  - Supported files: {len(supported_files)}")
 
         # Process batch
+        # 创建输出目录
         output_dir = temp_dir / "batch_output"
         print("\nStarting batch processing...")
         print(f"Output directory: {output_dir}")
