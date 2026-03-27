@@ -1,10 +1,13 @@
 """
-Complete document parsing + multimodal content insertion Pipeline
+完整的文档解析 + 多模态内容插入流水线（Pipeline）
 
-This script integrates:
-1. Document parsing (using configurable parsers)
-2. Pure text content LightRAG insertion
-3. Specialized processing for multimodal content (using different processors)
+本脚本集成了以下功能：
+
+1.文档解析（使用可配置的解析器）
+
+2.纯文本内容入库（插入到 LightRAG）
+
+3.多模态内容专项处理（使用不同的专用处理器）
 """
 
 import os
@@ -16,18 +19,18 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Add project root directory to Python path
+# 将项目根目录添加到 Python 路径（PYTHONPATH）中
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# Load environment variables from .env file BEFORE importing LightRAG
-# This is critical for TIKTOKEN_CACHE_DIR to work properly in offline environments
-# The OS environment variables take precedence over the .env file
+# 在导入 LightRAG 之前从 .env 文件中加载环境变量
+# 这在离线环境中对于 TIKTOKEN_CACHE_DIR 的正确工作至关重要
+# 操作系统环境变量优先于 .env 文件
 load_dotenv(dotenv_path=".env", override=False)
 
 from lightrag import LightRAG
 from lightrag.utils import logger
 
-# Import configuration and modules
+# 导入配置和模块
 from raganything.config import RAGAnythingConfig
 from raganything.query import QueryMixin
 from raganything.processor import ProcessorMixin
@@ -36,7 +39,7 @@ from raganything.utils import get_processor_supports
 from raganything.parser import MineruParser, SUPPORTED_PARSERS, get_parser
 from raganything.callbacks import CallbackManager
 
-# Import specialized processors
+# 导入专用的多模态处理器
 from raganything.modalprocessors import (
     ImageModalProcessor,
     TableModalProcessor,
@@ -49,58 +52,59 @@ from raganything.modalprocessors import (
 
 @dataclass
 class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
-    """Multimodal Document Processing Pipeline - Complete document parsing and insertion pipeline"""
+    """多模态文档处理流水线 - 完整的文档解析与入库流水线"""
 
-    # Core Components
+    # 核心组件
     # ---
     lightrag: Optional[LightRAG] = field(default=None)
-    """Optional pre-initialized LightRAG instance."""
+    """可选参数：预先初始化的 LightRAG 实例"""
 
     llm_model_func: Optional[Callable] = field(default=None)
-    """LLM model function for text analysis."""
+    """用于文本分析的大语言模型（LLM）函数"""
 
     vision_model_func: Optional[Callable] = field(default=None)
-    """Vision model function for image analysis."""
+    """用于图像分析的视觉模型（VLM）函数."""
 
     embedding_func: Optional[Callable] = field(default=None)
-    """Embedding function for text vectorization."""
+    """用于文本向量化的嵌入（Embedding）函数."""
 
     config: Optional[RAGAnythingConfig] = field(default=None)
-    """Configuration object, if None will create with environment variables."""
+    """配置对象，如果为 None，将通过环境变量自动创建."""
 
-    # LightRAG Configuration
+    # LightRAG 详细配置
     # ---
     lightrag_kwargs: Dict[str, Any] = field(default_factory=dict)
-    """Additional keyword arguments for LightRAG initialization when lightrag is not provided.
-    This allows passing all LightRAG configuration parameters like:
-    - kv_storage, vector_storage, graph_storage, doc_status_storage
-    - top_k, chunk_top_k, max_entity_tokens, max_relation_tokens, max_total_tokens
-    - cosine_threshold, related_chunk_number
-    - chunk_token_size, chunk_overlap_token_size, tokenizer, tiktoken_model_name
-    - embedding_batch_num, embedding_func_max_async, embedding_cache_config
-    - llm_model_name, llm_model_max_token_size, llm_model_max_async, llm_model_kwargs
-    - rerank_model_func, vector_db_storage_cls_kwargs, enable_llm_cache
-    - max_parallel_insert, max_graph_nodes, addon_params, etc.
+    """
+    当未直接提供 lightrag 实例时，用于初始化 LightRAG 的附加关键字参数
+    允许传递所有 LightRAG 配置参数，例如：
+    - 各种存储引擎：键值对存储 (kv)、向量存储 (vector)、图谱存储 (graph)、文档状态存储 (doc_status)
+    - 检索控制：top_k 检索数量、分片 top_k、实体/关系/总 Token 最大限制
+    - 相似度阈值、相关分片数量
+    - 分片设置：分片 Token 大小、重叠 Token 大小、分词器、tiktoken 模型名
+    - 嵌入优化：批量处理数量、最大异步并发数、Embedding 缓存配置
+    - 模型参数：模型名称、Token 上限、最大异步并发、模型私有参数 (kwargs)
+    - 其他：重排序函数 (rerank)、向量库类参数、是否启用 LLM 缓存
+    - 并发控制：最大并行插入数、最大图节点数、附加参数等。
     """
 
-    # Internal State
+    # 内部状态
     # ---
     modal_processors: Dict[str, Any] = field(default_factory=dict, init=False)
-    """Dictionary of multimodal processors."""
+    """多模态处理器字典（存储图片、表格等专家处理器的实例）."""
 
     context_extractor: Optional[ContextExtractor] = field(default=None, init=False)
-    """Context extractor for providing surrounding content to modal processors."""
+    """上下文提取器，用于为多模态处理器提供（图片/表格）周围的文本背景."""
 
     parse_cache: Optional[Any] = field(default=None, init=False)
-    """Parse result cache storage using LightRAG KV storage."""
+    """解析结果缓存存储（利用 LightRAG 的 KV 存储能力）."""
 
     callback_manager: CallbackManager = field(
         default_factory=CallbackManager, init=False, repr=False
     )
-    """Processing callbacks manager (optional hooks for observability and metrics)."""
+    """处理回调管理器（用于监控系统状态、收集运行指标的可选钩子）."""
 
     _parser_installation_checked: bool = field(default=False, init=False)
-    """Flag to track if parser installation has been checked."""
+    """标记位：记录是否已检查过解析器（如 MinerU）的安装情况."""
 
     def __post_init__(self):
         """Post-initialization setup following LightRAG pattern"""
@@ -138,12 +142,12 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
         self.logger.info(f"  Max concurrent files: {self.config.max_concurrent_files}")
 
     def close(self):
-        """Cleanup resources when object is destroyed.
-
-        Handles three common scenarios:
-        1. Inside a running async context (e.g., FastAPI shutdown) -> schedule task
-        2. No event loop in thread (typical atexit) -> create one with asyncio.run()
-        3. Event loop exists but is closed/closing (atexit race) -> create new loop
+        """
+        对象销毁时清理资源
+        处理以下三种常见场景：
+        1.在运行中的异步上下文内（例如 FastAPI 关闭时） -> 调度异步任务
+        2.线程中没有事件循环（典型的 atexit 进程退出时） -> 使用 asyncio.run() 创建一个
+        3.事件循环存在但已关闭/正在关闭（atexit 竞态条件） -> 创建一个新的事件循环
         """
         try:
             import asyncio
@@ -176,7 +180,7 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
             pass
 
     def _create_context_config(self) -> ContextConfig:
-        """Create context configuration from RAGAnything config"""
+        """从 RAGAnything 配置中创建上下文配置"""
         return ContextConfig(
             context_window=self.config.context_window,
             context_mode=self.config.context_mode,
@@ -187,7 +191,7 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
         )
 
     def _create_context_extractor(self) -> ContextExtractor:
-        """Create context extractor with tokenizer from LightRAG"""
+        """从 LightRAG 实例中获取分词器，并创建上下文提取器"""
         if self.lightrag is None:
             raise ValueError(
                 "LightRAG must be initialized before creating context extractor"
@@ -248,7 +252,7 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
         self.logger.info(f"上下文配置信息: {self._create_context_config()}")
 
     def update_config(self, **kwargs):
-        """Update configuration with new values"""
+        """更新配置参数"""
         for key, value in kwargs.items():
             if hasattr(self.config, key):
                 setattr(self.config, key, value)
@@ -257,7 +261,7 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
                 self.logger.warning(f"Unknown config parameter: {key}")
 
     async def _ensure_lightrag_initialized(self):
-        """Ensure LightRAG instance is initialized, create if necessary"""
+        """确保 LightRAG 实例已初始化，如果尚未初始化则创建一个"""
         try:
             # Check parser installation first
             if not self._parser_installation_checked:
@@ -397,13 +401,12 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
             return {"success": False, "error": error_msg}
 
     async def finalize_storages(self):
-        """Finalize all storages including parse cache and LightRAG storages
+        """
+        完成所有存储的收尾工作，包括解析缓存和 LightRAG 存储。
 
-        This method should be called when shutting down to properly clean up resources
-        and persist any cached data. It will finalize both the parse cache and LightRAG's
-        internal storages.
+        本方法应在系统关闭时调用，以便正确清理资源并持久化任何缓存数据。它将同时完成解析缓存和 LightRAG 内部存储的收尾.
 
-        Example usage:
+        代码示例:
             try:
                 rag_anything = RAGAnything(...)
                 await rag_anything.process_file("document.pdf")
@@ -413,10 +416,10 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
                 if rag_anything:
                     await rag_anything.finalize_storages()
 
-        Note:
-            - This method is automatically called in __del__ when the object is destroyed
-            - Manual calling is recommended in production environments
-            - All finalization tasks run concurrently for better performance
+        注意：
+        1.当对象被销毁时，__del__ 方法会自动调用此方法
+        2.在生产环境中，建议手动调用
+        3。为了提升性能，所有收尾任务都会并发运行
         """
         try:
             tasks = []
@@ -444,10 +447,9 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
 
     def check_parser_installation(self) -> bool:
         """
-        Check if the configured parser is properly installed
-
-        Returns:
-            bool: True if the configured parser is properly installed
+        检查已配置的解析器是否已正确安装。
+        返回：
+        bool: 如果配置的解析器已正确安装，则返回 True
         """
         return self.doc_parser.check_installation()
 
@@ -463,7 +465,7 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
         return True
 
     def get_config_info(self) -> Dict[str, Any]:
-        """Get current configuration information"""
+        """获取当前配置信息"""
         config_info = {
             "directory": {
                 "working_dir": self.config.working_dir,
@@ -553,11 +555,11 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
         )
 
     def update_context_config(self, **context_kwargs):
-        """Update context extraction configuration
-
-        Args:
-            **context_kwargs: Context configuration parameters to update
-                (context_window, context_mode, max_context_tokens, etc.)
+        """
+        更新上下文提取配置
+        参数说明：
+        **context_kwargs: 待更新的上下文配置参数
+        （例如：context_window 上下文窗口大小、context_mode 上下文模式、max_context_tokens 最大上下文 Token 数等）
         """
         # Update the main config
         for key, value in context_kwargs.items():
@@ -585,7 +587,7 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
                 self.logger.error(f"Failed to update context configuration: {e}")
 
     def get_processor_info(self) -> Dict[str, Any]:
-        """Get processor information"""
+        """获取处理器信息"""
         base_info = {
             "mineru_installed": MineruParser.check_installation(MineruParser()),
             "parser_installation": {
