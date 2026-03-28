@@ -21,6 +21,24 @@ For Office documents (.doc, .docx, .ppt, .pptx), please convert them to PDF
 format first.
 """
 
+"""
+通用文档解析工具
+
+这个模块提供了使用内置的MinerU、Docling和PaddleOCR解析器解析文档的功能，
+并公开了一个小型注册表用于**进程内**的自定义解析器（参见：func:`register_parser`）。
+
+重要说明：
+
+- 自定义解析器注册表主要用于Python环境，在那里你的应用程序导入一个
+解析器实现并调用：func:`register_parser`，然后调用RAGAnything API。
+- 独立的CLI（``python -m raganything.parser``或安装的控制台脚本）不会执行自动发现插件；
+它只能识别到当前进程中已经注册的自定义解析器（例如通过包装脚本或：mod:`sitecustomize`
+注册的解析器）。
+
+MinerU 2.0不再包含LibreOffice文档转换模块。
+对于Office文档（.doc、.docx、.ppt、.pptx），请先将它们转换为PDF格式再进行处理。
+"""
+
 from __future__ import annotations
 
 
@@ -57,7 +75,7 @@ class MineruExecutionError(Exception):
             f"Mineru command failed with return code {return_code}: {error_msg}"
         )
 
-
+# 定义一个基本的Parser类，包含常用的文件格式常量和一些通用的基础工具方法
 class Parser:
     """
     Base class for document parsing utilities.
@@ -66,6 +84,7 @@ class Parser:
     """
 
     # Define common file formats
+    # 定义常用文件格式常量
     OFFICE_FORMATS = {".doc", ".docx", ".ppt", ".pptx", ".xls", ".xlsx"}
     IMAGE_FORMATS = {".png", ".jpeg", ".jpg", ".bmp", ".tiff", ".tif", ".gif", ".webp"}
     TEXT_FORMATS = {".txt", ".md"}
@@ -598,6 +617,14 @@ class MineruParser(Parser):
     and generating markdown and JSON output.
 
     Note: Office documents are no longer directly supported. Please convert them to PDF first.
+    """
+
+    """
+    mineru 2.0文档解析工具类
+
+    支持解析PDF和图像文档，将内容转换为结构化数据，并生成markdown和JSON输出。
+
+    注意：Office文档不再直接支持。请先将它们转换为PDF格式。
     """
 
     __slots__ = ()
@@ -2270,7 +2297,7 @@ def get_supported_parsers() -> tuple:
     """Return all supported parser names including custom registered parsers."""
     return SUPPORTED_PARSERS + tuple(_CUSTOM_PARSERS.keys())
 
-
+# 获取解析器实例
 def get_parser(parser_type: str) -> Parser:
     """Get a parser instance by name.
 
@@ -2287,7 +2314,23 @@ def get_parser(parser_type: str) -> Parser:
     Raises:
         ValueError: If the parser name is not recognized.
     """
-    parser_name = (parser_type or "mineru").strip().lower()
+
+    """
+    根据名字获得一个解析器实例
+
+    先检查内置解析器，如果没有匹配的，再回退检查通过 register_parser 注册的自定义解析器
+
+    参数：
+        parser_type: 解析器名字（例如 "mineru", "docling", "paddleocr"，或者任何通过 register_parser 注册的自定义名字）
+    
+    返回：
+        请求的解析器实例
+
+    异常：
+        ValueError: 如果解析器名字不被识别
+    """
+
+    parser_name = (parser_type or "mineru").strip().lower() # 默认使用 "mineru" 作为默认解析器，去掉前后空格并转成小写
     if parser_name == "mineru":
         return MineruParser()
     if parser_name == "docling":
@@ -2295,8 +2338,10 @@ def get_parser(parser_type: str) -> Parser:
     if parser_name == "paddleocr":
         return PaddleOCRParser()
     # Check custom parser registry
+    # 如果内置解析器都没匹配上，就检查自定义解析器注册表
     if parser_name in _CUSTOM_PARSERS:
         return _CUSTOM_PARSERS[parser_name]()
+    # 如果都没匹配上，就抛出异常，提示不支持的解析器类型，并列出所有支持的解析器
     raise ValueError(
         f"Unsupported parser type: {parser_type}. "
         f"Supported parsers: {', '.join(get_supported_parsers())}"

@@ -58,6 +58,11 @@ class BatchParser:
     and comprehensive error handling.
     """
 
+    """
+    批量文件解析器，支持并行处理多个文档，并提供进度跟踪和错误处理功能。
+    """
+
+    # 类初始化，设置解析器类型、并行工作线程数、是否显示进度条、每个文件的超时时间，以及是否跳过安装检查
     def __init__(
         self,
         parser_type: str = "mineru",
@@ -76,11 +81,23 @@ class BatchParser:
             timeout_per_file: Timeout in seconds for each file
             skip_installation_check: Skip parser installation check (useful for testing)
         """
+
+        """
+        初始化批量解析器
+
+        参数:
+            parser_type: 使用的解析器类型("mineru"、"docling" 或 "paddleocr")
+            max_workers: 最大并行工作线程数
+            show_progress: 是否显示进度条
+            timeout_per_file: 每个文件的超时时间（秒）
+            skip_installation_check: 是否跳过解析器安装检查（适用于测试）
+        """
+
         self.parser_type = parser_type
         self.max_workers = max_workers
         self.show_progress = show_progress
         self.timeout_per_file = timeout_per_file
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger(__name__) # 给当前文件创建一个日志器，方便排查错误
 
         # Initialize parser
         try:
@@ -89,6 +106,8 @@ class BatchParser:
             raise ValueError(f"Unsupported parser type: {parser_type}") from exc
 
         # Check parser installation (optional)
+        # 解析器安装检查（可选）
+        # 如果没有跳过安装检查，就调用解析器的安装检查方法，如果检查失败，记录一个警告日志，但不抛出异常，因为解析器可能仍然可以工作
         if not skip_installation_check:
             if not self.parser.check_installation():
                 self.logger.warning(
@@ -98,15 +117,17 @@ class BatchParser:
                 )
                 # Don't raise an error, just warn - the parser might still work
 
+    # 获取当前解析器支持的文件后缀名列表
     def get_supported_extensions(self) -> List[str]:
         """Get list of supported file extensions"""
         return list(
-            self.parser.OFFICE_FORMATS
-            | self.parser.IMAGE_FORMATS
-            | self.parser.TEXT_FORMATS
+            self.parser.OFFICE_FORMATS # office格式
+            | self.parser.IMAGE_FORMATS # 图片格式
+            | self.parser.TEXT_FORMATS # 文本格式
             | {".pdf"}
         )
 
+    # 过滤输入的文件
     def filter_supported_files(
         self, file_paths: List[str], recursive: bool = True
     ) -> List[str]:

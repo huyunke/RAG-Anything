@@ -173,6 +173,7 @@ def demonstrate_basic_batch_processing():
         print("\nStarting batch processing...")
         print(f"Output directory: {output_dir}")
 
+        # 执行批量处理并计时
         start_time = time.time()
         result = batch_parser.process_batch(
             file_paths=supported_files,
@@ -183,6 +184,7 @@ def demonstrate_basic_batch_processing():
         processing_time = time.time() - start_time
 
         # Display results
+        # 打印批量处理结果摘要、处理时间和成功率等统计信息
         print("\n" + "-" * 40)
         print("BATCH PROCESSING RESULTS")
         print("-" * 40)
@@ -190,6 +192,7 @@ def demonstrate_basic_batch_processing():
         print(f"Total processing time: {processing_time:.2f} seconds")
         print(f"Success rate: {result.success_rate:.1f}%")
 
+        # 打印成功处理的文件和失败的文件列表，以及失败文件的错误信息
         if result.successful_files:
             print("\nSuccessfully processed files:")
             for file_path in result.successful_files:
@@ -203,11 +206,12 @@ def demonstrate_basic_batch_processing():
 
         return result
 
+    # 提示处理过程中可能出现的异常，并打印错误信息
     except Exception as e:
         print(f"❌ Batch processing demonstration failed: {str(e)}")
         return None
 
-
+# 异步批量处理演示，文件处理并行执行以提高性能
 async def demonstrate_async_batch_processing():
     """Demonstrate asynchronous batch processing"""
     print("\n" + "=" * 60)
@@ -215,12 +219,14 @@ async def demonstrate_async_batch_processing():
     print("=" * 60)
 
     # Create sample documents
+    # 导入上面创建的文件路径和目录
     sample_files, temp_dir = create_sample_documents()
 
     try:
         print(f"Processing {len(sample_files)} documents asynchronously...")
 
         # Create batch parser
+        # 创建批量解析器实例，配置解析器类型、并行工作线程数、进度显示和跳过安装检查等参数
         batch_parser = BatchParser(
             parser_type="mineru",
             max_workers=2,
@@ -229,8 +235,10 @@ async def demonstrate_async_batch_processing():
         )
 
         # Process batch asynchronously
+        # 创建输出目录
         output_dir = temp_dir / "async_output"
 
+        # 执行异步批量处理并计时(await关键字用于等待异步操作完成，在此期间程序可以继续执行其他任务)
         start_time = time.time()
         result = await batch_parser.process_batch_async(
             file_paths=sample_files,
@@ -241,6 +249,7 @@ async def demonstrate_async_batch_processing():
         processing_time = time.time() - start_time
 
         # Display results
+        # 打印异步批量处理结果摘要、处理时间和成功率等统计信息
         print("\n" + "-" * 40)
         print("ASYNC BATCH PROCESSING RESULTS")
         print("-" * 40)
@@ -250,11 +259,12 @@ async def demonstrate_async_batch_processing():
 
         return result
 
+    # 异常显示
     except Exception as e:
         print(f"❌ Async batch processing demonstration failed: {str(e)}")
         return None
 
-
+# 
 async def demonstrate_rag_integration():
     """Demonstrate batch processing integration with RAG-Anything"""
     print("\n" + "=" * 60)
