@@ -10,23 +10,35 @@ This module provides improved Markdown to PDF conversion with:
 - Multiple output formats
 """
 
-import os
-import logging
-from pathlib import Path
-from typing import Dict, Any, Optional
-from dataclasses import dataclass
-import tempfile
-import subprocess
+"""
+增强的 Markdown 转 PDF 转换
+
+该模块提供了改进的 Markdown 转 PDF 转换功能，具有以下特点：
+- 更好的格式和样式
+- 图片支持
+- 表格支持
+- 代码语法高亮
+- 自定义模板
+- 多种输出格式
+"""
+
+import os # 操作系统相关功能，如路径处理和环境变量访问
+import logging # 日志记录模块
+from pathlib import Path # 面向对象的路径处理模块
+from typing import Dict, Any, Optional # 类型提示模块(给变量和函数参数加类型提示)
+from dataclasses import dataclass # 数据类装饰器，用于简化类的定义(可自动生成__init__等方法)
+import tempfile # 用于创建用完即删的临时文件和目录的模块
+import subprocess # 用于运行外部命令的模块
 
 try:
-    import markdown
+    import markdown # Markdown 处理库，用于将 Markdown 转换为 HTML
 
     MARKDOWN_AVAILABLE = True
 except ImportError:
     MARKDOWN_AVAILABLE = False
 
 try:
-    from weasyprint import HTML
+    from weasyprint import HTML # WeasyPrint 库，用于将 HTML 转换为 PDF
 
     WEASYPRINT_AVAILABLE = True
 except ImportError:
@@ -34,15 +46,15 @@ except ImportError:
 
 try:
     # Check if pandoc module exists (not used directly, just for detection)
-    import importlib.util
+    import importlib.util # 用于检查模块是否存在的工具模块
 
-    spec = importlib.util.find_spec("pandoc")
+    spec = importlib.util.find_spec("pandoc") # 检查是否安装了 pandoc 模块（pandoc是一个文档转换工具，支持多种格式转换）
     PANDOC_AVAILABLE = spec is not None
 except ImportError:
     PANDOC_AVAILABLE = False
 
 
-@dataclass
+@dataclass # 说明这是一个数据类，Python 会自动生成 __init__ 和其他方法
 class MarkdownConfig:
     """Configuration for Markdown to PDF conversion"""
 

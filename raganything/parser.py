@@ -594,6 +594,22 @@ class Parser:
         Returns:
             List[Dict[str, Any]]: List of content blocks
         """
+
+        """
+        解析文档的抽象方法。
+        必须由子类实现。
+
+        参数:
+            file_path: 要解析的文件路径
+            method: 解析方法（auto、txt、ocr）
+            output_dir: 输出目录路径
+            lang: OCR优化的文档语言
+            **kwargs: 解析器特定命令的其他参数
+
+        返回:
+            List[Dict[str, Any]]: 内容块列表
+        """
+
         raise NotImplementedError("parse_document must be implemented by subclasses")
 
     def check_installation(self) -> bool:

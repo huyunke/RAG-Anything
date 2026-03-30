@@ -109,22 +109,28 @@ class RAGAnything(QueryMixin, ProcessorMixin, BatchMixin):
     def __post_init__(self):
         """Post-initialization setup following LightRAG pattern"""
         # Initialize configuration if not provided
+        # 如果没有提供配置对象，则从环境变量创建一个默认配置对象
         if self.config is None:
             self.config = RAGAnythingConfig()
 
         # Set working directory
+        # 将配置中的工作目录设置为实例属性，供后续使用（如 LightRAG 初始化、文件处理等）
         self.working_dir = self.config.working_dir
 
         # Set up logger (use existing logger, don't configure it)
+        # 使用现有的 logger 实例，不在这里配置它（例如：不设置日志级别或处理器），以便用户可以在外部完全控制日志输出
         self.logger = logger
 
         # Set up document parser
+        # 根据config中的parser字段获取对应的解析器实例
         self.doc_parser = get_parser(self.config.parser)
 
         # Register close method for cleanup
+        # 注册 close 方法，在对象销毁时自动调用以清理资源
         atexit.register(self.close)
 
         # Create working directory if needed
+        # 如果工作目录不存在，则创建它，并记录日志
         if not os.path.exists(self.working_dir):
             os.makedirs(self.working_dir)
             self.logger.info(f"Created working directory: {self.working_dir}")

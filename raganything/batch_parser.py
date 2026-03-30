@@ -5,6 +5,12 @@ This module provides functionality for processing multiple documents in parallel
 with progress reporting and error handling.
 """
 
+"""
+批量和并行文档解析
+
+该模块提供了并行处理多个文档的功能，并带有进度报告和错误处理。
+"""
+
 import asyncio
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -141,18 +147,30 @@ class BatchParser:
         Returns:
             List of supported file paths
         """
+
+        """
+        把输入的文件路径列表过滤成只包含支持的文件类型
+
+        参数：
+            file_paths: 文件路径或目录的列表
+            recursive: 是否递归搜索目录
+        """
+        # 获取当前解析器支持的文件后缀名集合
         supported_extensions = set(self.get_supported_extensions())
         supported_files = []
 
+        # 遍历输入的文件路径列表
         for path_str in file_paths:
             path = Path(path_str)
 
+            # 如果是一个文件并且是支持的后缀名，就添加到支持的文件列表中
             if path.is_file():
                 if path.suffix.lower() in supported_extensions:
                     supported_files.append(str(path))
                 else:
                     self.logger.warning(f"Unsupported file type: {path}")
 
+            # 如果是一个目录，根据是否递归搜索来查找支持的文件
             elif path.is_dir():
                 if recursive:
                     # Recursively find all files
@@ -170,7 +188,7 @@ class BatchParser:
                             and file_path.suffix.lower() in supported_extensions
                         ):
                             supported_files.append(str(file_path))
-
+            # 如果既不是一个文件也不是一个目录，记录一个警告日志
             else:
                 self.logger.warning(f"Path does not exist: {path}")
 
@@ -191,15 +209,31 @@ class BatchParser:
         Returns:
             Tuple of (success, file_path, error_message)
         """
+
+        """
+        处理单个文件
+
+        参数：
+            file_path: 要处理的文件路径
+            output_dir: 输出目录
+            parse_method: 解析方法
+            **kwargs: 其他解析器参数
+
+        返回：
+            (成功, 文件路径, 错误信息) 的元组
+        """
+
         try:
             start_time = time.time()
 
             # Create file-specific output directory
+            # 创建文件特定的输出目录，使用输入文件的名称作为子目录名
             file_name = Path(file_path).stem
             file_output_dir = Path(output_dir) / file_name
             file_output_dir.mkdir(parents=True, exist_ok=True)
 
             # Parse the document
+            # 解析文档
             content_list = self.parser.parse_document(
                 file_path=file_path,
                 output_dir=str(file_output_dir),
@@ -209,6 +243,7 @@ class BatchParser:
 
             processing_time = time.time() - start_time
 
+            # 记录一个信息日志，说明成功处理了哪个文件，包含多少内容块，以及处理时间
             self.logger.info(
                 f"Successfully processed {file_path} "
                 f"({len(content_list)} content blocks, {processing_time:.2f}s)"
@@ -244,9 +279,25 @@ class BatchParser:
         Returns:
             BatchProcessingResult with processing statistics
         """
+
+        """
+        并行处理多个文件
+
+        参数：
+            file_paths: 要处理的文件路径或目录的列表
+            output_dir: 基础输出目录
+            parse_method: 所有文件的解析方法
+            recursive: 是否递归搜索目录
+            dry_run: 当为 True 时，仅列出文件而不处理它们
+            **kwargs: 其他解析器参数
+
+        返回：
+            包含处理统计信息的 BatchProcessingResult
+        """
         start_time = time.time()
 
         # Filter to supported files
+        # 过滤出支持的文件
         supported_files = self.filter_supported_files(file_paths, recursive)
 
         if not supported_files:
@@ -261,8 +312,10 @@ class BatchParser:
                 dry_run=dry_run,
             )
 
+        # 记录一个信息日志，说明找到了多少个文件需要处理
         self.logger.info(f"Found {len(supported_files)} files to process")
 
+        # 如果是干运行模式，记录一个信息日志，说明启用了干运行，并且会处理多少个文件，然后返回一个 BatchProcessingResult，其中成功的文件列表就是支持的文件列表，失败的文件列表是空的，处理时间是0，错误字典是空的，输出目录是指定的输出目录，干运行标志是 True
         if dry_run:
             self.logger.info(
                 f"Dry run enabled. {len(supported_files)} files would be processed."
@@ -278,15 +331,18 @@ class BatchParser:
             )
 
         # Create output directory
+        # 创建输出目录
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
         # Process files in parallel
+        # 并行处理文件
         successful_files = []
         failed_files = []
         errors = {}
 
         # Create progress bar if requested
+        # 如果请求了进度条，就创建一个 tqdm 进度条，设置总数为支持的文件数量，描述为正在处理文件（包含解析器类型），单位为文件
         pbar = None
         if self.show_progress:
             pbar = tqdm(
@@ -296,8 +352,11 @@ class BatchParser:
             )
 
         try:
+            # 创建一个线程池执行器，设置最大工作线程数 max_workers
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 # Submit all tasks
+                # 将每个文件提交到线性池
+                # future_to_file是一个字典，键是提交的任务（future对象），值是对应的文件路径
                 future_to_file = {
                     executor.submit(
                         self.process_single_file,
@@ -311,7 +370,7 @@ class BatchParser:
 
                 # Process completed tasks
                 for future in as_completed(
-                    future_to_file, timeout=self.timeout_per_file
+                    future_to_file, timeout=self.timeout_per_file # 给每个任务设置一个超时时间，单位是秒
                 ):
                     success, file_path, error_msg = future.result()
 
@@ -320,7 +379,7 @@ class BatchParser:
                     else:
                         failed_files.append(file_path)
                         errors[file_path] = error_msg
-
+                    # 更新进度条
                     if pbar:
                         pbar.update(1)
 
@@ -334,7 +393,7 @@ class BatchParser:
                     errors[file_path] = f"Processing interrupted: {str(e)}"
                     if pbar:
                         pbar.update(1)
-
+        # 清理资源
         finally:
             if pbar:
                 pbar.close()
@@ -342,6 +401,7 @@ class BatchParser:
         processing_time = time.time() - start_time
 
         # Create result
+        # 创建结果
         result = BatchProcessingResult(
             successful_files=successful_files,
             failed_files=failed_files,
@@ -353,6 +413,7 @@ class BatchParser:
         )
 
         # Log summary
+        # 日志记录总结
         self.logger.info(result.summary())
 
         return result
@@ -379,6 +440,21 @@ class BatchParser:
 
         Returns:
             BatchProcessingResult with processing statistics
+        """
+
+        """
+        批处理的异步版本
+
+        参数：
+            file_paths: 要处理的文件路径或目录的列表
+            output_dir: 基础输出目录
+            parse_method: 所有文件的解析方法
+            recursive: 是否递归搜索目录
+            dry_run: 当为 True 时，仅列出文件而不处理它们
+            **kwargs: 其他解析器参数
+
+        返回：
+            包含处理统计信息的 BatchProcessingResult
         """
         # Run the sync version in a thread pool
         loop = asyncio.get_event_loop()

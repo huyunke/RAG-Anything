@@ -14,13 +14,27 @@ Features demonstrated:
 - Command-line interface usage
 """
 
-import logging
-from pathlib import Path
-import tempfile
+"""
+增强的 Markdown 转换示例
+
+这个示例展示了 RAG-Anything 的增强 Markdown 向 PDF 转换功能，支持多种后端、定制化样式和专业格式。
+
+展示的功能：
+- 基础 Markdown 转 PDF 转换
+- 多种转换后端（WeasyPrint、Pandoc）
+- 自定义 CSS 样式和配置
+- 后端检测和选择
+- 错误处理和回退机制
+- 命令行界面使用
+"""
+
+import logging # 日志记录模块
+from pathlib import Path # 面向对象的路径处理模块
+import tempfile # 临时文件和目录管理模块
 
 # Add project root directory to Python path
 import sys
-
+# 将项目根目录添加到 Python 路径中，以便导入 raganything 模块和相关配置
 sys.path.append(str(Path(__file__).parent.parent))
 
 from raganything.enhanced_markdown import EnhancedMarkdownConverter, MarkdownConfig

@@ -264,7 +264,7 @@ async def demonstrate_async_batch_processing():
         print(f"❌ Async batch processing demonstration failed: {str(e)}")
         return None
 
-# 
+# RAG-Anything集成演示，展示如何将批量处理与RAG-Anything的文档处理管道集成以实现更强大的功能
 async def demonstrate_rag_integration():
     """Demonstrate batch processing integration with RAG-Anything"""
     print("\n" + "=" * 60)
@@ -276,6 +276,7 @@ async def demonstrate_rag_integration():
 
     try:
         # Initialize RAG-Anything with temporary storage
+        # 初始化RAG-Anything实例，配置临时存储目录和启用各种处理功能，以及设置最大并行文件数
         config = RAGAnythingConfig(
             working_dir=str(temp_dir / "rag_storage"),
             enable_image_processing=True,
@@ -289,33 +290,38 @@ async def demonstrate_rag_integration():
         print("RAG-Anything initialized with batch processing capabilities")
 
         # Show available batch methods
+        # 获取并打印RAG-Anything实例中可用的批处理方法列表
         batch_methods = [method for method in dir(rag) if "batch" in method.lower()]
         print(f"Available batch methods: {batch_methods}")
 
         # Demonstrate batch processing with RAG integration
+        # 演示使用RAG集成的批量处理功能，处理示例文件并输出结果摘要和成功率等统计信息
         print(f"\nProcessing {len(sample_files)} documents with RAG integration...")
 
         # Use the RAG-integrated batch processing
+        # 使用RAG集成的批量处理方法
         try:
             # Process documents in batch
+            # 批量处理文档并输出结果摘要和成功率等统计信息
             result = rag.process_documents_batch(
-                file_paths=sample_files,
-                output_dir=str(temp_dir / "rag_batch_output"),
-                max_workers=2,
-                show_progress=True,
+                file_paths=sample_files, # 处理示例文件列表
+                output_dir=str(temp_dir / "rag_batch_output"), # 输出目录
+                max_workers=2, # 最大并行文件数
+                show_progress=True, # 显示处理进度
             )
 
             print("\n" + "-" * 40)
             print("RAG BATCH PROCESSING RESULTS")
             print("-" * 40)
-            print(result.summary())
-            print(f"Success rate: {result.success_rate:.1f}%")
+            print(result.summary()) # 打印处理结果摘要
+            print(f"Success rate: {result.success_rate:.1f}%") # 打印成功率
 
             # Demonstrate batch processing with full RAG integration
+            # 演示使用完整RAG集成的批量处理功能，处理示例文件并输出结果摘要、处理时间和成功率等统计信息
             print("\nProcessing documents with full RAG integration...")
 
             rag_result = await rag.process_documents_with_rag_batch(
-                file_paths=sample_files[:2],  # Process subset for demo
+                file_paths=sample_files[:2],  # Process subset for demo # 演示时处理文件子集
                 output_dir=str(temp_dir / "rag_full_output"),
                 max_workers=1,
                 show_progress=True,
@@ -346,44 +352,50 @@ async def demonstrate_rag_integration():
         print(f"❌ RAG integration demonstration failed: {str(e)}")
         return None
 
-
+# 目录处理演示，展示如何使用批量处理功能递归处理整个目录中的文件
 def demonstrate_directory_processing():
     """Demonstrate processing entire directories"""
+    """展示处理整个目录的功能"""
     print("\n" + "=" * 60)
     print("DIRECTORY PROCESSING DEMONSTRATION")
     print("=" * 60)
 
     # Create a directory structure with nested files
+    # 创建一个包含嵌套文件的目录结构
     temp_dir = Path(tempfile.mkdtemp())
 
     # Create main directory files
+    # 在主目录中创建文件
     main_files = {
         "overview.txt": "Main directory overview document",
         "readme.md": "# Project README\n\nThis is the main project documentation.",
     }
 
     # Create subdirectory
+    # 创建子目录
     sub_dir = temp_dir / "subdirectory"
-    sub_dir.mkdir()
-
+    sub_dir.mkdir() # 创建文件夹(子目录)
+    # 子目录中的文件
     sub_files = {
         "details.txt": "Detailed information in subdirectory",
         "notes.md": "# Notes\n\nAdditional notes and information.",
     }
 
     # Write all files
+    # 将所有文件写入磁盘，并收集它们的路径以供批量处理使用
     all_files = []
     for filename, content in main_files.items():
         file_path = temp_dir / filename
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        all_files.append(str(file_path))
+            f.write(content) # 写入文件内容
+        all_files.append(str(file_path)) # 将文件路径添加到列表中
 
+    # 将子目录中的文件写入磁盘，并添加到文件列表中
     for filename, content in sub_files.items():
         file_path = sub_dir / filename
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        all_files.append(str(file_path))
+            f.write(content) # 写入文件内容
+        all_files.append(str(file_path)) # 将文件路径添加到列表中
 
     try:
         print("Created directory structure:")
@@ -393,31 +405,33 @@ def demonstrate_directory_processing():
         print(f"  Files in sub: {list(sub_files.keys())}")
 
         # Create batch parser
+        # 创建批量解析器实例，配置解析器类型、并行工作线程数、进度显示和跳过安装检查等参数
         batch_parser = BatchParser(
-            parser_type="mineru",
-            max_workers=2,
-            show_progress=True,
-            skip_installation_check=True,
+            parser_type="mineru", # 解析器类型
+            max_workers=2, # 最大并行文件数
+            show_progress=True, # 显示处理进度
+            skip_installation_check=True, # 演示时跳过安装校验
         )
 
         # Process entire directory recursively
+        # 使用批量处理功能递归处理整个目录中的文件，并输出结果摘要、处理时间和成功率等统计信息
         print("\nProcessing entire directory recursively...")
 
         result = batch_parser.process_batch(
-            file_paths=[str(temp_dir)],  # Pass directory path
-            output_dir=str(temp_dir / "directory_output"),
-            parse_method="auto",
-            recursive=True,  # Include subdirectories
+            file_paths=[str(temp_dir)],  # 传递目录路径
+            output_dir=str(temp_dir / "directory_output"), # 输出目录
+            parse_method="auto", # 解析方法为自动
+            recursive=True,  # 递归处理子目录
         )
 
         print("\n" + "-" * 40)
         print("DIRECTORY PROCESSING RESULTS")
         print("-" * 40)
-        print(result.summary())
-        print(f"Total files found and processed: {result.total_files}")
-        print(f"Success rate: {result.success_rate:.1f}%")
+        print(result.summary()) # 打印处理结果摘要
+        print(f"Total files found and processed: {result.total_files}") # 打印找到并处理的文件总数
+        print(f"Success rate: {result.success_rate:.1f}%") # 打印成功率
 
-        if result.successful_files:
+        if result.successful_files: # 打印成功处理的文件列表
             print("\nSuccessfully processed:")
             for file_path in result.successful_files:
                 relative_path = Path(file_path).relative_to(temp_dir)
@@ -429,22 +443,25 @@ def demonstrate_directory_processing():
         print(f"❌ Directory processing demonstration failed: {str(e)}")
         return None
 
-
+# 错误处理演示，展示如何处理批量处理过程中可能出现的各种错误，并实现错误恢复机制
 def demonstrate_error_handling():
     """Demonstrate error handling and recovery"""
     print("\n" + "=" * 60)
     print("ERROR HANDLING DEMONSTRATION")
     print("=" * 60)
 
+    # 创建一个临时目录，并在其中创建一些具有不同问题的文件（如空文件、大文件、非存在文件等），以测试批量处理的错误处理能力
     temp_dir = Path(tempfile.mkdtemp())
 
     # Create files with various issues
+    # 创建具有各种问题的文件
     files_with_issues = {
-        "valid_file.txt": "This is a valid file that should process successfully.",
-        "empty_file.txt": "",  # Empty file
-        "large_file.txt": "x" * 1000000,  # Large file (1MB of 'x')
+        "valid_file.txt": "This is a valid file that should process successfully.", # 正常的文件
+        "empty_file.txt": "",  # 空文件
+        "large_file.txt": "x" * 1000000,  # 大文件
     }
 
+    # 遍历字典，把文件放到临时列表中，并写入磁盘
     created_files = []
     for filename, content in files_with_issues.items():
         file_path = temp_dir / filename
@@ -453,42 +470,45 @@ def demonstrate_error_handling():
         created_files.append(str(file_path))
 
     # Add a non-existent file to the list
+    # 添加一个不存在的文件到列表中，以测试处理过程中对缺失文件的错误处理能力
     created_files.append(str(temp_dir / "non_existent_file.txt"))
 
     try:
         print(f"Testing error handling with {len(created_files)} files:")
         for file_path in created_files:
-            name = Path(file_path).name
-            exists = Path(file_path).exists()
-            size = Path(file_path).stat().st_size if exists else 0
+            name = Path(file_path).name # 获取文件名
+            exists = Path(file_path).exists() # 检查文件是否存在
+            size = Path(file_path).stat().st_size if exists else 0 # 获取文件大小，如果文件存在则获取，否则为0
             print(f"  - {name}: {'exists' if exists else 'missing'}, {size} bytes")
 
         # Create batch parser with short timeout for demonstration
+        # 创建批量解析器实例，配置解析器类型、并行工作线程数、进度显示、短超时时间和跳过安装检查等参数，以测试错误处理能力
         batch_parser = BatchParser(
             parser_type="mineru",
             max_workers=2,
             show_progress=True,
-            timeout_per_file=30,  # Short timeout for demo
+            timeout_per_file=30,  # 设置较短的超时时间以触发处理大文件时的超时错误
             skip_installation_check=True,
         )
 
         # Process files and handle errors
+        # 处理文件并捕获处理过程中可能出现的各种错误（如文件不存在、处理超时、解析错误等），并输出处理结果摘要、成功率以及失败文件的错误详情
         result = batch_parser.process_batch(
             file_paths=created_files,
             output_dir=str(temp_dir / "error_test_output"),
-            parse_method="auto",
+            parse_method="auto", # 解析方法为自动
         )
 
         print("\n" + "-" * 40)
         print("ERROR HANDLING RESULTS")
         print("-" * 40)
         print(result.summary())
-
+        # 如果有成功处理的文件，打印成功文件列表
         if result.successful_files:
             print("\nSuccessful files:")
             for file_path in result.successful_files:
                 print(f"  ✅ {Path(file_path).name}")
-
+        # 如果有失败的文件，打印失败文件列表和对应的错误详情
         if result.failed_files:
             print("\nFailed files with error details:")
             for file_path in result.failed_files:
@@ -496,19 +516,21 @@ def demonstrate_error_handling():
                 print(f"  ❌ {Path(file_path).name}: {error}")
 
         # Demonstrate retry logic
+        # 如果有失败的文件，展示如何使用批量处理的重试机制来重新处理这些失败的文件，并输出重试结果摘要和成功率等统计信息
         if result.failed_files:
             print(
                 f"\nDemonstrating retry logic for {len(result.failed_files)} failed files..."
             )
 
             # Retry only the failed files
+            # 仅重试失败的文件，使用相同的批量处理方法，并输出重试结果摘要和成功率等统计信息
             retry_result = batch_parser.process_batch(
                 file_paths=result.failed_files,
                 output_dir=str(temp_dir / "retry_output"),
                 parse_method="auto",
             )
 
-            print(f"Retry results: {retry_result.summary()}")
+            print(f"Retry results: {retry_result.summary()}") # 打印重试结果摘要
 
         return result
 
@@ -519,39 +541,47 @@ def demonstrate_error_handling():
 
 async def main():
     """Main demonstration function"""
+    """主函数，运行所有演示"""
     # Configure logging
+    # 配置日志记录
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.INFO, # 设置日志级别为INFO，即只输出INFO及以上级别的日志
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        # 日志输出格式模板，包含时间戳、日志记录器名称、日志级别和日志具体内容
     )
 
-    print("RAG-Anything Batch Processing Demonstration")
+    print("RAG-Anything Batch Processing Demonstration") # 打印演示标题
     print("=" * 70)
-    print("This example demonstrates various batch processing capabilities:")
-    print("  - Basic batch processing with progress tracking")
-    print("  - Asynchronous processing for improved performance")
-    print("  - Integration with RAG-Anything pipeline")
-    print("  - Directory processing with recursive file discovery")
-    print("  - Comprehensive error handling and recovery")
+    print("This example demonstrates various batch processing capabilities:") # 这个示例演示了各种批量处理功能
+    print("  - Basic batch processing with progress tracking") # 基本批量处理，带有进度跟踪功能
+    print("  - Asynchronous processing for improved performance") # 异步处理以提高性能
+    print("  - Integration with RAG-Anything pipeline") # 与RAG-Anything管道的集成
+    print("  - Directory processing with recursive file discovery") # 目录处理，带有递归文件发现功能
+    print("  - Comprehensive error handling and recovery") # 综合错误处理和恢复机制
 
-    results = {}
+    results = {} # 用于存储每个演示的结果，以便在最后进行总结和比较
 
     # Run demonstrations
     print("\n🚀 Starting demonstrations...")
 
     # Basic batch processing
+    # 运行基本批量处理演示
     results["basic"] = demonstrate_basic_batch_processing()
 
     # Asynchronous processing
+    # 运行异步批量处理演示
     results["async"] = await demonstrate_async_batch_processing()
 
     # RAG integration
+    # 运行RAG集成演示
     results["rag"] = await demonstrate_rag_integration()
 
     # Directory processing
+    # 运行目录处理演示
     results["directory"] = demonstrate_directory_processing()
 
     # Error handling
+    # 运行错误处理演示
     results["error_handling"] = demonstrate_error_handling()
 
     # Summary
@@ -561,7 +591,7 @@ async def main():
 
     for demo_name, result in results.items():
         if result:
-            if hasattr(result, "success_rate"):
+            if hasattr(result, "success_rate"): # 检查result是否有success_rate属性，如果有则打印成功率，否则只打印完成信息  
                 print(
                     f"✅ {demo_name.upper()}: {result.success_rate:.1f}% success rate"
                 )
@@ -589,6 +619,6 @@ async def main():
     print("  - Set reasonable timeouts for document processing")
     print("  - Use skip_installation_check for environments with conflicts")
 
-
+# 如果这个文件是被直接运行的，那么执行main函数
 if __name__ == "__main__":
     asyncio.run(main())
