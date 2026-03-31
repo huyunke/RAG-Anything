@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-Text Format Parsing Test Script for RAG-Anything
+RAG-Anything 文本格式解析测试脚本
 
-This script demonstrates how to parse various text formats
-using MinerU, including TXT and MD files.
+本脚本演示了如何使用 MinerU 解析多种文本格式，包括 TXT 和 MD 文件。
 
-Requirements:
-- ReportLab library for PDF conversion
-- RAG-Anything package
+依赖项：
 
-Usage:
+ReportLab 库（用于 PDF 转换）
+
+RAG-Anything 软件包
+
+使用方法:
     python text_format_test.py --file path/to/text/document.md
 """
 
@@ -21,57 +22,58 @@ from raganything import RAGAnything
 
 
 def check_reportlab_installation():
-    """Check if ReportLab is installed and available"""
+    """检查 ReportLab 是否已安装并可用"""
     try:
         import reportlab
 
         print(
-            f"✅ ReportLab found: version {reportlab.Version if hasattr(reportlab, 'Version') else 'Unknown'}"
+            f"✅ 找到 ReportLab: 版本 {reportlab.Version if hasattr(reportlab, 'Version') else 'Unknown'}"
         )
         return True
     except ImportError:
-        print("❌ ReportLab not found. Please install ReportLab:")
+        print("❌ 未找到 ReportLab。请安装该库：")
         print("  pip install reportlab")
         return False
 
 
 async def test_text_format_parsing(file_path: str):
-    """Test text format parsing with MinerU"""
+    """使用 MinerU 测试文本格式解析能力"""
 
-    print(f"🧪 Testing text format parsing: {file_path}")
+    print(f"🧪 正在测试文本格式解析: {file_path}")
 
-    # Check if file exists and is a supported text format
+    # 1. 检查文件是否存在以及是否为支持的文本格式
     file_path = Path(file_path)
     if not file_path.exists():
-        print(f"❌ File does not exist: {file_path}")
+        print(f"❌ 文件不存在: {file_path}")
         return False
 
     supported_extensions = {".txt", ".md"}
     if file_path.suffix.lower() not in supported_extensions:
-        print(f"❌ Unsupported file format: {file_path.suffix}")
-        print(f"   Supported formats: {', '.join(supported_extensions)}")
+        print(f"❌ 不支持的文件格式: {file_path.suffix}")
+        print(f"   当前支持的格式: {', '.join(supported_extensions)}")
         return False
 
-    print(f"📄 File format: {file_path.suffix.upper()}")
-    print(f"📏 File size: {file_path.stat().st_size / 1024:.1f} KB")
+    print(f"📄 文件格式: {file_path.suffix.upper()}")
+    print(f"📏 文件大小: {file_path.stat().st_size / 1024:.1f} KB")
 
     # Display text file info
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
-        print(f"📝 Text length: {len(content)} characters")
-        print(f"📋 Line count: {len(content.splitlines())}")
+        print(f"📝 文本长度: {len(content)} characters")
+        print(f"📋 行数: {len(content.splitlines())}")
     except UnicodeDecodeError:
         print(
-            "⚠️  Text encoding: Non-UTF-8 (will try multiple encodings during processing)"
+            "⚠️  文本编码: 非 UTF-8 (处理过程中将尝试多种编码识别)"
         )
 
-    # Initialize RAGAnything (only for parsing functionality)
+    # 3. 初始化 RAGAnything (此处仅使用其解析模块)
     rag = RAGAnything()
 
     try:
-        # Test text parsing with MinerU
-        print("\n🔄 Testing text parsing with MinerU...")
+        # 4. 调用 MinerU 执行核心解析
+        # parse_method="auto" 表示让系统自动决定是用 OCR 还是直接提取
+        print("\n🔄 正在调用 MinerU 解析文本...")
         content_list, md_content = await rag.parse_document(
             file_path=str(file_path),
             output_dir="./test_output",
@@ -79,11 +81,11 @@ async def test_text_format_parsing(file_path: str):
             display_stats=True,
         )
 
-        print("✅ Parsing successful!")
-        print(f"   📊 Content blocks: {len(content_list)}")
-        print(f"   📝 Markdown length: {len(md_content)} characters")
+        print("✅ 解析成功!")
+        print(f"   📊 内容块数量: {len(content_list)}")
+        print(f"   📝 生成的 Markdown 长度: {len(md_content)} 个字符")
 
-        # Analyze content types
+        # 5.分析内容类型（统计解析出了哪些元素）
         content_types = {}
         for item in content_list:
             if isinstance(item, dict):
@@ -91,11 +93,11 @@ async def test_text_format_parsing(file_path: str):
                 content_types[content_type] = content_types.get(content_type, 0) + 1
 
         if content_types:
-            print("   📋 Content distribution:")
+            print("   📋 内容分布情况:")
             for content_type, count in sorted(content_types.items()):
                 print(f"      • {content_type}: {count}")
 
-        # Display extracted text (if any)
+        # 6. 展示提取出的文本预览
         if md_content.strip():
             print("\n📄 Extracted text preview (first 500 characters):")
             preview = md_content.strip()[:500]
@@ -103,14 +105,14 @@ async def test_text_format_parsing(file_path: str):
         else:
             print("\n📄 No text extracted from the document")
 
-        # Display text blocks
+        # 7. 详细检查文本块 (Text Blocks)
         text_items = [
             item
             for item in content_list
             if isinstance(item, dict) and item.get("type") == "text"
         ]
         if text_items:
-            print("\n📝 Text blocks found:")
+            print("\n📝 发现文本块:")
             for i, item in enumerate(text_items[:3], 1):
                 text_content = item.get("text", "")
                 if text_content.strip():
@@ -119,78 +121,78 @@ async def test_text_format_parsing(file_path: str):
                         f"   {i}. {preview}{'...' if len(text_content) > 200 else ''}"
                     )
 
-        # Check for any tables detected in the text
+        # 8. 检查文本中是否识别到了表格
         table_items = [
             item
             for item in content_list
             if isinstance(item, dict) and item.get("type") == "table"
         ]
         if table_items:
-            print(f"\n📊 Found {len(table_items)} table(s) in document:")
+            print(f"\n📊 文档中发现 {len(table_items)} 个表格:")
             for i, item in enumerate(table_items, 1):
                 table_body = item.get("table_body", "")
                 row_count = len(table_body.split("\n"))
-                print(f"   {i}. Table with {row_count} rows")
+                print(f"   {i}. 包含约 {row_count} 行的表格")
 
-        # Check for images (unlikely in text files but possible in MD)
+        # 9. 检查图片（TXT 不可能有，但 MD 可能包含外链图片引用）
         image_items = [
             item
             for item in content_list
             if isinstance(item, dict) and item.get("type") == "image"
         ]
         if image_items:
-            print(f"\n🖼️  Found {len(image_items)} image(s):")
+            print(f"\n🖼️  发现 {len(image_items)} 张图片:")
             for i, item in enumerate(image_items, 1):
-                print(f"   {i}. Image path: {item.get('img_path', 'N/A')}")
+                print(f"   {i}. 图片路径: {item.get('img_path', 'N/A')}")
 
-        print("\n🎉 Text format parsing test completed successfully!")
-        print("📁 Output files saved to: ./test_output")
+        print("\n🎉 文本格式解析测试圆满完成!")
+        print("📁 输出文件已保存至: ./test_output")
         return True
 
     except Exception as e:
-        print(f"\n❌ Text format parsing failed: {str(e)}")
+        print(f"\n❌ 文本格式解析失败: {str(e)}")
         import traceback
 
-        print(f"   Full error: {traceback.format_exc()}")
+        print(f"   完整错误堆栈: {traceback.format_exc()}")
         return False
 
 
 def main():
-    """Main function"""
-    parser = argparse.ArgumentParser(description="Test text format parsing with MinerU")
-    parser.add_argument("--file", help="Path to the text file to test")
+    """主程序入口"""
+    parser = argparse.ArgumentParser(description="使用 MinerU 测试文本格式解析")
+    parser.add_argument("--file", help="待测试的文本文件路径")
     parser.add_argument(
         "--check-reportlab",
         action="store_true",
-        help="Only check ReportLab installation",
+        help="仅检查 ReportLab 安装情况",
     )
 
     args = parser.parse_args()
 
-    # Check ReportLab installation
-    print("🔧 Checking ReportLab installation...")
+    # 首先执行环境检查
+    print("🔧 正在检查 ReportLab 安装状态...")
     if not check_reportlab_installation():
         return 1
 
     if args.check_reportlab:
-        print("✅ ReportLab installation check passed!")
+        print("✅ ReportLab 环境检查通过!")
         return 0
 
-    # If not just checking dependencies, file argument is required
+    # 如果不是只查依赖，则必须提供 --file 参数
     if not args.file:
-        print("❌ Error: --file argument is required when not using --check-reportlab")
+        print("❌ 错误: 未使用 --check-reportlab 时，必须提供 --file 参数")
         parser.print_help()
         return 1
 
-    # Run the parsing test
+    # 执行异步解析测试
     try:
         success = asyncio.run(test_text_format_parsing(args.file))
         return 0 if success else 1
     except KeyboardInterrupt:
-        print("\n⏹️ Test interrupted by user")
+        print("\n⏹️ 用户手动中断测试")
         return 1
     except Exception as e:
-        print(f"\n❌ Unexpected error: {str(e)}")
+        print(f"\n❌ 发生了意外错误: {str(e)}")
         return 1
 
 

@@ -1453,10 +1453,13 @@ class ProcessorMixin:
             )
 
     async def _mark_multimodal_processing_complete(self, doc_id: str):
-        """Mark multimodal content processing as complete in the document status."""
+        """在文档状态中将多模态内容处理标记为已完成."""
         try:
+            # 1. 从 LightRAG 的状态库中获取当前文档的最新状态
+            # doc_id 是文档的唯一标识符
             current_doc_status = await self.lightrag.doc_status.get_by_id(doc_id)
             if current_doc_status:
+                # 2. 执行状态更新
                 await self.lightrag.doc_status.upsert(
                     {
                         doc_id: {
@@ -1466,13 +1469,14 @@ class ProcessorMixin:
                         }
                     }
                 )
+                # 3. 触发索引完成的回调函数
                 await self.lightrag.doc_status.index_done_callback()
                 self.logger.debug(
-                    f"Marked multimodal content processing as complete for document {doc_id}"
+                    f"文档 {doc_id} 的多模态内容处理已标记为完成"
                 )
         except Exception as e:
             self.logger.warning(
-                f"Error marking multimodal processing as complete for document {doc_id}: {e}"
+                f"为文档 {doc_id} 标记多模态处理完成时出错: {e}"
             )
 
     async def is_document_fully_processed(self, doc_id: str) -> bool:
