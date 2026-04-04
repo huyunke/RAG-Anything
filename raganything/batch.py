@@ -24,24 +24,27 @@ class BatchMixin:
     logger: logging.Logger
 
     # Type hints for methods that will be available from other mixins
-    async def _ensure_lightrag_initialized(self) -> None: ...
-    async def process_document_complete(self, file_path: str, **kwargs) -> None: ...
+    async def _ensure_lightrag_initialized(self) -> None:
+        ...
+
+    async def process_document_complete(self, file_path: str, **kwargs) -> None:
+        ...
 
     # ==========================================
     # ORIGINAL BATCH PROCESSING METHOD (RESTORED)
     # ==========================================
 
     async def process_folder_complete(
-        self,
-        folder_path: str,
-        output_dir: str = None,
-        parse_method: str = None,
-        display_stats: bool = None,
-        split_by_character: str | None = None,
-        split_by_character_only: bool = False,
-        file_extensions: Optional[List[str]] = None,
-        recursive: bool = None,
-        max_workers: int = None,
+            self,
+            folder_path: str,
+            output_dir: str = None,
+            parse_method: str = None,
+            display_stats: bool = None,
+            split_by_character: str | None = None,
+            split_by_character_only: bool = False,
+            file_extensions: Optional[List[str]] = None,
+            recursive: bool = None,
+            max_workers: int = None,
     ):
         """
         Process all supported files in a folder
@@ -108,7 +111,7 @@ class BatchMixin:
                     lambda file_path, dir_path: len(
                         file_path.relative_to(dir_path).parents
                     )
-                    > 1
+                                                > 1
                 )(file_path, folder_path_obj)
 
                 try:
@@ -172,14 +175,14 @@ class BatchMixin:
     # ==========================================
 
     def process_documents_batch(
-        self,
-        file_paths: List[str],
-        output_dir: Optional[str] = None,
-        parse_method: Optional[str] = None,
-        max_workers: Optional[int] = None,
-        recursive: Optional[bool] = None,
-        show_progress: bool = True,
-        **kwargs,
+            self,
+            file_paths: List[str],
+            output_dir: Optional[str] = None,
+            parse_method: Optional[str] = None,
+            max_workers: Optional[int] = None,
+            recursive: Optional[bool] = None,
+            show_progress: bool = True,
+            **kwargs,
     ) -> BatchProcessingResult:
         """
         Process multiple documents in batch using the new BatchParser
@@ -224,14 +227,14 @@ class BatchMixin:
         )
 
     async def process_documents_batch_async(
-        self,
-        file_paths: List[str],
-        output_dir: Optional[str] = None,
-        parse_method: Optional[str] = None,
-        max_workers: Optional[int] = None,
-        recursive: Optional[bool] = None,
-        show_progress: bool = True,
-        **kwargs,
+            self,
+            file_paths: List[str],
+            output_dir: Optional[str] = None,
+            parse_method: Optional[str] = None,
+            max_workers: Optional[int] = None,
+            recursive: Optional[bool] = None,
+            show_progress: bool = True,
+            **kwargs,
     ) -> BatchProcessingResult:
         """
         Asynchronously process multiple documents in batch
@@ -281,7 +284,7 @@ class BatchMixin:
         return batch_parser.get_supported_extensions()
 
     def filter_supported_files(
-        self, file_paths: List[str], recursive: Optional[bool] = None
+            self, file_paths: List[str], recursive: Optional[bool] = None
     ) -> List[str]:
         """
         Filter file paths to only include supported file types
@@ -300,33 +303,30 @@ class BatchMixin:
         return batch_parser.filter_supported_files(file_paths, recursive)
 
     async def process_documents_with_rag_batch(
-        self,
-        file_paths: List[str],
-        output_dir: Optional[str] = None,
-        parse_method: Optional[str] = None,
-        max_workers: Optional[int] = None,
-        recursive: Optional[bool] = None,
-        show_progress: bool = True,
-        **kwargs,
+            self,
+            file_paths: List[str],
+            output_dir: Optional[str] = None,
+            parse_method: Optional[str] = None,
+            max_workers: Optional[int] = None,
+            recursive: Optional[bool] = None,
+            show_progress: bool = True,
+            **kwargs,
     ) -> Dict[str, Any]:
         """
-        Process documents in batch and then add them to RAG
+        批量处理文档并将其添加到RAG,该方法结合了文档解析和RAG插入功能：
+        首先，使用批量处理方式解析所有文档,然后，对每个成功解析的文档进行RAG处理
 
-        This method combines document parsing and RAG insertion:
-        1. First, parse all documents using batch processing
-        2. Then, process each successfully parsed document with RAG
+        参数:
+        file_paths: 要处理的文件路径列表或目录列表
+        output_dir: 解析后文件的输出目录
+        parse_method: 要使用的解析方法
+        max_workers: 并行处理的最大工作进程数
+        recursive: 是否递归处理子目录
+        show_progress: 是否显示进度条
+        **kwargs: 传递给解析器的其他参数
 
-        Args:
-            file_paths: List of file paths or directories to process
-            output_dir: Output directory for parsed files
-            parse_method: Parsing method to use
-            max_workers: Maximum number of workers for parallel processing
-            recursive: Whether to process directories recursively
-            show_progress: Whether to show progress bar
-            **kwargs: Additional arguments passed to the parser
-
-        Returns:
-            Dict containing both parse results and RAG processing results
+        返回:
+        包含解析结果和RAG处理结果的字典
         """
         start_time = time.time()
         callback_manager = getattr(self, "callback_manager", None)
