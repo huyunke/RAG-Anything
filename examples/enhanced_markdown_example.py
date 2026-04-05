@@ -39,11 +39,12 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 from raganything.enhanced_markdown import EnhancedMarkdownConverter, MarkdownConfig
 
-
+# 创建一个markdown内容生成函数，提供不同类型的示例内容用于测试转换功能
 def create_sample_markdown_content():
     """Create comprehensive sample markdown content for testing"""
 
     # Basic sample
+    # 基本示例，展示常见的Markdown语法和格式
     basic_content = """# Basic Markdown Sample
 
 ## Introduction
@@ -77,6 +78,7 @@ def hello_world():
 """
 
     # Technical documentation sample
+    # 技术文档示例，展示更复杂的结构、表格、流程图和代码示例
     technical_content = """# Technical Documentation
 
 ## Table of Contents
@@ -220,6 +222,7 @@ The enhanced markdown conversion system provides professional-quality PDF genera
 """
 
     # Academic paper sample
+    # 学术论文示例，展示复杂的结构、引用、公式和专业格式
     academic_content = """# Research Paper: Advanced Document Processing
 
 **Authors:** Alice Johnson¹, Bob Smith², Carol Williams¹
@@ -383,6 +386,7 @@ This research demonstrates that enhanced markdown conversion provides significan
     }
 
 
+# 展示基础的markdown到PDF转换功能，使用默认设置和自动后端选择
 def demonstrate_basic_conversion():
     """Demonstrate basic markdown to PDF conversion"""
     print("\n" + "=" * 60)
@@ -391,27 +395,32 @@ def demonstrate_basic_conversion():
 
     try:
         # Create converter with default settings
+        # 创建一个使用默认设置的转换器
         converter = EnhancedMarkdownConverter()
 
         # Show backend information
+        # 展示后端信息
         backend_info = converter.get_backend_info()
-        print("Available conversion backends:")
+        print("Available conversion backends:") # 展示可用的转换后端
         for backend, available in backend_info["available_backends"].items():
             status = "✅" if available else "❌"
             print(f"  {status} {backend}")
-        print(f"Recommended backend: {backend_info['recommended_backend']}")
+        print(f"Recommended backend: {backend_info['recommended_backend']}") # 展示推荐的转换后端
 
         # Get sample content
+        # 获取示例内容
         samples = create_sample_markdown_content()
-        temp_dir = Path(tempfile.mkdtemp())
+        temp_dir = Path(tempfile.mkdtemp()) # 创建一个临时目录用于存储输入和输出文件
 
         # Convert basic sample
+        # 转换基本示例，使用自动选择的后端进行转换
         basic_md_path = temp_dir / "basic_sample.md"
         with open(basic_md_path, "w", encoding="utf-8") as f:
             f.write(samples["basic"])
 
         print(f"\nConverting basic sample: {basic_md_path}")
 
+        # 将markdown内容转换成pdf，并保存到临时目录中，使用自动选择的后端进行转换
         success = converter.convert_file_to_pdf(
             input_path=str(basic_md_path),
             output_path=str(temp_dir / "basic_sample.pdf"),
@@ -430,7 +439,7 @@ def demonstrate_basic_conversion():
         print(f"❌ Basic conversion demonstration failed: {str(e)}")
         return False, None
 
-
+# 展示不同转换后端的比较，测试同一文档使用不同后端进行转换，并比较结果和性能
 def demonstrate_backend_comparison():
     """Demonstrate different conversion backends"""
     print("\n" + "=" * 60)
@@ -438,17 +447,19 @@ def demonstrate_backend_comparison():
     print("=" * 60)
 
     try:
-        samples = create_sample_markdown_content()
-        temp_dir = Path(tempfile.mkdtemp())
+        samples = create_sample_markdown_content() # 获取示例内容
+        temp_dir = Path(tempfile.mkdtemp()) # 创建一个临时目录用于存储输入和输出文件
 
         # Create technical document
-        tech_md_path = temp_dir / "technical.md"
+        # 创建一个技术文档示例，用于测试不同转换后端的性能和输出质量
+        tech_md_path = temp_dir / "technical.md" # 定义技术文档的路径
         with open(tech_md_path, "w", encoding="utf-8") as f:
-            f.write(samples["technical"])
+            f.write(samples["technical"]) # 将技术文档内容写入文件
 
         print("Testing different backends with technical document...")
 
         # Test different backends
+        # 开始测试不同的转换后端，比较它们的性能和输出质量
         backends = ["auto", "weasyprint", "pandoc"]
         results = {}
 

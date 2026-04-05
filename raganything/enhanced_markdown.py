@@ -57,28 +57,33 @@ except ImportError:
 @dataclass # 说明这是一个数据类，Python 会自动生成 __init__ 和其他方法
 class MarkdownConfig:
     """Configuration for Markdown to PDF conversion"""
+    # Markdown 转 PDF 转换的配置类，包含各种选项和参数
 
     # Styling options
-    css_file: Optional[str] = None
-    template_file: Optional[str] = None
-    page_size: str = "A4"
-    margin: str = "1in"
-    font_size: str = "12pt"
-    line_height: str = "1.5"
+    # 样式选项
+    css_file: Optional[str] = None # 自定义 CSS 文件路径，用于覆盖默认样式
+    template_file: Optional[str] = None # 自定义 HTML 模板文件路径，用于覆盖默认模板
+    page_size: str = "A4" # 页面尺寸
+    margin: str = "1in" # 页面边距
+    font_size: str = "12pt" # 字体大小
+    line_height: str = "1.5" # 行高
 
     # Content options
-    include_toc: bool = True
-    syntax_highlighting: bool = True
-    image_max_width: str = "100%"
-    table_style: str = "border-collapse: collapse; width: 100%;"
+    # 内容选项
+    include_toc: bool = True # 是否包含目录
+    syntax_highlighting: bool = True # 是否启用代码语法高亮
+    image_max_width: str = "100%" # 图片最大宽度
+    table_style: str = "border-collapse: collapse; width: 100%;" # 表格样式
 
     # Output options
+    # 输出选项
     output_format: str = "pdf"  # pdf, html, docx
-    output_dir: Optional[str] = None
+    output_dir: Optional[str] = None # 输出目录，如果为 None 则使用当前目录
 
     # Advanced options
-    custom_css: Optional[str] = None
-    metadata: Optional[Dict[str, str]] = None
+    # 高级选项
+    custom_css: Optional[str] = None # 内联自定义 CSS 样式，适合少量样式调整
+    metadata: Optional[Dict[str, str]] = None # pdf元数据，如标题、作者、主题等
 
 
 class EnhancedMarkdownConverter:
@@ -91,6 +96,15 @@ class EnhancedMarkdownConverter:
     - ReportLab (fallback, basic styling)
     """
 
+    """
+    增强的 Markdown 转 PDF 转换器，支持多个后端
+
+    支持多种转换方法：
+    - WeasyPrint（推荐用于 HTML/CSS 样式）
+    - Pandoc（推荐用于复杂文档）
+    - ReportLab（回退选项，基本样式）
+    """
+
     def __init__(self, config: Optional[MarkdownConfig] = None):
         """
         Initialize the converter
@@ -98,13 +112,22 @@ class EnhancedMarkdownConverter:
         Args:
             config: Configuration for conversion
         """
-        self.config = config or MarkdownConfig()
-        self.logger = logging.getLogger(__name__)
+
+        """
+        初始化转换器
+
+        参数:
+            config: 转换配置
+        """
+        self.config = config or MarkdownConfig() # 如果没有提供配置，则使用默认配置
+        self.logger = logging.getLogger(__name__) # 获取当前模块的日志记录器
 
         # Check available backends
+        # 检查可用的转换后端，并记录日志
         self.available_backends = self._check_backends()
         self.logger.info(f"Available backends: {list(self.available_backends.keys())}")
 
+    # 检查哪些转换后端可用，并返回一个字典，键是后端名称，值是布尔值表示是否可用
     def _check_backends(self) -> Dict[str, bool]:
         """Check which conversion backends are available"""
         backends = {
@@ -114,6 +137,7 @@ class EnhancedMarkdownConverter:
         }
 
         # Check if pandoc is installed on system
+        # 检查系统上是否安装了 pandoc 命令行工具（因为pandoc模块可能只是一个接口，实际转换需要系统上的pandoc工具）
         try:
             subprocess.run(["pandoc", "--version"], capture_output=True, check=True)
             backends["pandoc_system"] = True
@@ -122,6 +146,7 @@ class EnhancedMarkdownConverter:
 
         return backends
 
+    # 获取默认的 CSS 样式，用于转换后的 HTML 文档
     def _get_default_css(self) -> str:
         """Get default CSS styling"""
         return """
@@ -237,14 +262,16 @@ class EnhancedMarkdownConverter:
         }
         """
 
+    # 处理 Markdown 内容
     def _process_markdown_content(self, content: str) -> str:
         """Process Markdown content with extensions"""
-        if not MARKDOWN_AVAILABLE:
+        if not MARKDOWN_AVAILABLE: # 如果 markdown 库不可用，抛出运行时错误，提示用户安装 markdown 库
             raise RuntimeError(
                 "Markdown library not available. Install with: pip install markdown"
             )
 
         # Configure Markdown extensions
+        # 配置 Markdown 扩展，启用表格、代码块、目录、属性列表、定义列表和脚注等功能
         extensions = [
             "markdown.extensions.tables",
             "markdown.extensions.fenced_code",
@@ -255,6 +282,7 @@ class EnhancedMarkdownConverter:
             "markdown.extensions.footnotes",
         ]
 
+        # 扩展配置，设置代码高亮的 CSS 类和使用 Pygments 进行语法高亮，设置目录的标题和永久链接等选项
         extension_configs = {
             "codehilite": {
                 "css_class": "highlight",
@@ -267,16 +295,19 @@ class EnhancedMarkdownConverter:
         }
 
         # Convert Markdown to HTML
-        md = markdown.Markdown(
+        # 将 Markdown 转换为 HTML
+        md = markdown.Markdown( # 创建一个 Markdown 对象，传入扩展和扩展配置
             extensions=extensions, extension_configs=extension_configs
         )
-
+        # 将 Markdown 内容转换为 HTML
         html_content = md.convert(content)
 
         # Add CSS styling
+        # 添加 CSS 样式，如果用户提供了自定义 CSS，则使用它，否则使用默认 CSS
         css = self.config.custom_css or self._get_default_css()
 
         # Create complete HTML document
+        # 创建完整的 HTML 文档，包含 DOCTYPE、html、head 和 body 标签，在 head 中包含 meta 标签和 title 标签，以及内联的 CSS 样式，在 body 中包含转换后的 HTML 内容
         html_doc = f"""
         <!DOCTYPE html>
         <html>
@@ -295,22 +326,25 @@ class EnhancedMarkdownConverter:
 
         return html_doc
 
+    # 使用 WeasyPrint 进行转换（适合样式化的文档）
     def convert_with_weasyprint(self, markdown_content: str, output_path: str) -> bool:
         """Convert using WeasyPrint (best for styling)"""
-        if not WEASYPRINT_AVAILABLE:
+        if not WEASYPRINT_AVAILABLE: # 检查 WeasyPrint 是否可用，如果不可用，抛出运行时错误，提示用户安装 WeasyPrint 库
             raise RuntimeError(
                 "WeasyPrint not available. Install with: pip install weasyprint"
             )
 
         try:
             # Process Markdown to HTML
+            # 将 Markdown 内容处理为 HTML，调用之前定义的 _process_markdown_content 方法
             html_content = self._process_markdown_content(markdown_content)
 
             # Convert HTML to PDF
+            # 使用 WeasyPrint 将 HTML 转换为 PDF，创建一个 HTML 对象，传入 HTML 内容，然后调用 write_pdf 方法将其写入指定的输出路径
             html = HTML(string=html_content)
             html.write_pdf(output_path)
 
-            self.logger.info(
+            self.logger.info( # 记录日志，表示成功使用 WeasyPrint 转换为 PDF，并显示输出路径
                 f"Successfully converted to PDF using WeasyPrint: {output_path}"
             )
             return True
@@ -319,11 +353,12 @@ class EnhancedMarkdownConverter:
             self.logger.error(f"WeasyPrint conversion failed: {str(e)}")
             return False
 
+    # 使用 Pandoc 进行转换（适合复杂文档）
     def convert_with_pandoc(
         self, markdown_content: str, output_path: str, use_system_pandoc: bool = False
     ) -> bool:
         """Convert using Pandoc (best for complex documents)"""
-        if (
+        if ( # 如果系统没有安装pandoc并且不使用系统pandoc，则抛出运行时错误，提示用户安装 pandoc 工具
             not self.available_backends.get("pandoc_system", False)
             and not use_system_pandoc
         ):
@@ -331,18 +366,20 @@ class EnhancedMarkdownConverter:
                 "Pandoc not available. Install from: https://pandoc.org/installing.html"
             )
 
-        temp_md_path = None
+        temp_md_path = None # 初始化临时 Markdown 文件路径变量，用于存储转换过程中生成的临时文件路径
         try:
-            import subprocess
+            import subprocess # 导入 subprocess 模块，用于运行外部命令（在这里用于调用 pandoc 命令行工具）
 
             # Create temporary markdown file
+            # 创建一个临时 Markdown 文件
             with tempfile.NamedTemporaryFile(
-                mode="w", suffix=".md", delete=False
+                mode="w", suffix=".md", delete=False # 以写入模式创建一个后缀为 .md 的临时文件，并且在关闭后不删除该文件
             ) as temp_file:
                 temp_file.write(markdown_content)
                 temp_md_path = temp_file.name
 
             # Build pandoc command with wkhtmltopdf engine
+            # 构建 pandoc 命令，指定输入文件、输出文件、使用 wkhtmltopdf 作为 PDF 引擎，并启用独立文档、目录和章节编号等选项
             cmd = [
                 "pandoc",
                 temp_md_path,
@@ -355,8 +392,10 @@ class EnhancedMarkdownConverter:
             ]
 
             # Run pandoc
+            # 运行 pandoc 命令，使用 subprocess.run 方法，传入命令列表，启用捕获输出、文本模式和设置超时时间为 60 秒
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
 
+            # 如果命令执行成功（返回码为 0），记录日志表示成功转换为 PDF，并显示输出路径；否则，记录错误日志并显示错误信息
             if result.returncode == 0:
                 self.logger.info(
                     f"Successfully converted to PDF using Pandoc: {output_path}"
@@ -370,6 +409,7 @@ class EnhancedMarkdownConverter:
             self.logger.error(f"Pandoc conversion failed: {str(e)}")
             return False
 
+        # 无论转换成功与否，最后都尝试清理临时 Markdown 文件，如果文件存在，则尝试删除它，并记录任何可能发生的错误
         finally:
             if temp_md_path and os.path.exists(temp_md_path):
                 try:
@@ -379,6 +419,7 @@ class EnhancedMarkdownConverter:
                         f"Failed to clean up temp file {temp_md_path}: {str(e)}"
                     )
 
+    # 主要的转换方法，根据指定的转换方法参数，调用相应的转换函数进行 Markdown 到 PDF 的转换
     def convert_markdown_to_pdf(
         self, markdown_content: str, output_path: str, method: str = "auto"
     ) -> bool:
@@ -393,9 +434,23 @@ class EnhancedMarkdownConverter:
         Returns:
             True if conversion successful, False otherwise
         """
+
+        """
+        将 Markdown 内容转换为 PDF
+
+        参数:
+            markdown_content: 要转换的 Markdown 内容
+            output_path: 输出 PDF 文件路径
+            method: 转换方法（"auto"、"weasyprint"、"pandoc"、"pandoc_system"）
+
+        返回:
+            如果转换成功则返回 True，否则返回 False
+        """
+
+        # 当指定转换方法为 "auto" 时，调用 _get_recommended_backend 方法获取推荐的转换后端
         if method == "auto":
             method = self._get_recommended_backend()
-
+        # 调用相应的转换函数进行 Markdown 到 PDF 的转换
         try:
             if method == "weasyprint":
                 return self.convert_with_weasyprint(markdown_content, output_path)
@@ -412,6 +467,7 @@ class EnhancedMarkdownConverter:
             self.logger.error(f"{method.title()} conversion failed: {str(e)}")
             return False
 
+    # 将 Markdown 文件转换为 PDF
     def convert_file_to_pdf(
         self, input_path: str, output_path: Optional[str] = None, method: str = "auto"
     ) -> bool:
@@ -426,17 +482,32 @@ class EnhancedMarkdownConverter:
         Returns:
             bool: True if conversion successful
         """
+
+        """
+        将 Markdown 文件转换为 PDF
+
+        参数:
+            input_path: 输入 Markdown 文件路径
+            output_path: 输出 PDF 文件路径（可选）
+            method: 转换方法
+
+        返回:
+            bool: 如果转换成功则返回 True
+        """
+        # 将输入路径转换为 Path 对象，从而更方便地进行路径操作和检查
         input_path_obj = Path(input_path)
 
+        # 检查路径是否存在
         if not input_path_obj.exists():
             raise FileNotFoundError(f"Input file not found: {input_path}")
 
         # Read markdown content
-        try:
+        try: # 尝试以 UTF-8 编码读取 Markdown 文件内容
             with open(input_path_obj, "r", encoding="utf-8") as f:
                 markdown_content = f.read()
         except UnicodeDecodeError:
             # Try with different encodings
+            # 尝试一些别的编码来读取markdown文件内容
             for encoding in ["gbk", "latin-1", "cp1252"]:
                 try:
                     with open(input_path_obj, "r", encoding=encoding) as f:
@@ -450,25 +521,29 @@ class EnhancedMarkdownConverter:
                 )
 
         # Determine output path
+        # 指定输出路径，如果没有提供，则使用输入文件的路径并将扩展名更改为 .pdf
         if output_path is None:
             output_path = str(input_path_obj.with_suffix(".pdf"))
 
+        # 获取内容后使用内容转换函数将 Markdown 内容转换为 PDF，并返回转换结果
         return self.convert_markdown_to_pdf(markdown_content, output_path, method)
 
+    # 获取关于可用转换后端的信息，包括哪些后端可用、推荐的后端以及当前配置的详细信息
     def get_backend_info(self) -> Dict[str, Any]:
         """Get information about available backends"""
         return {
-            "available_backends": self.available_backends,
-            "recommended_backend": self._get_recommended_backend(),
+            "available_backends": self.available_backends, # 可用的转换后端列表，包含每个后端的可用状态（True 或 False）
+            "recommended_backend": self._get_recommended_backend(), # 推荐的转换后端，根据可用性自动选择
             "config": {
-                "page_size": self.config.page_size,
-                "margin": self.config.margin,
-                "font_size": self.config.font_size,
-                "include_toc": self.config.include_toc,
-                "syntax_highlighting": self.config.syntax_highlighting,
+                "page_size": self.config.page_size, # 页面尺寸配置
+                "margin": self.config.margin, # 页面边距配置
+                "font_size": self.config.font_size, # 字体大小配置
+                "include_toc": self.config.include_toc, # 是否包含目录的配置
+                "syntax_highlighting": self.config.syntax_highlighting, # 是否启用代码语法高亮的配置
             },
         }
 
+    # 根据可用性自动选择推荐的转换后端，优先使用系统安装的 pandoc，其次是 weasyprint，如果都不可用则返回 "none"
     def _get_recommended_backend(self) -> str:
         """Get recommended backend based on availability"""
         if self.available_backends.get("pandoc_system", False):
