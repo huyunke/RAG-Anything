@@ -4,14 +4,14 @@ RAGAnything 的查询功能
 包含所有针对文本查询和多模态查询的相关方法
 """
 
-import json
-import hashlib
-import re
+import json # 处理json数据，特别是在生成缓存键时需要将查询参数序列化为字符串
+import hashlib # 生成查询参数的哈希值，用于创建唯一的缓存键
+import re # 正则表达式，用于在查询文本中识别和处理图片路径
 import time
-from typing import Dict, List, Any
+from typing import Dict, List, Any # 类型提示，增强代码可读性和维护性
 from pathlib import Path
-from lightrag import QueryParam
-from lightrag.utils import always_get_an_event_loop
+from lightrag import QueryParam # LightRAG 的查询参数类，用于配置查询行为
+from lightrag.utils import always_get_an_event_loop # 确保在异步环境中有一个事件循环可用，特别是在某些环境（如 Jupyter Notebook）中可能没有默认事件循环时使用
 from raganything.prompt import PROMPTS
 from raganything.utils import (
     get_processor_for_type,
@@ -38,20 +38,36 @@ class QueryMixin:
         Returns:
             str: Cache key hash
         """
+
+        """
+        生成多模态查询的缓存键
+
+        参数说明：
+            query: 基础查询文本
+            multimodal_content: 多模态内容列表，每个元素包含内容类型和相关信息
+            mode: 查询模式（如 "local", "global", "hybrid", "naive", "mix", "bypass"）
+            **kwargs: 其他查询参数，将传递给 QueryParam 配置对象
+
+        返回：
+            str: 生成的缓存键哈希值，用于唯一标识具有相同查询参数的查询结果
+        """
         # Create a normalized representation of the query parameters
+        # 创建一个规范化的查询参数表示，确保相同的查询内容即使在格式上有细微差异（如空格、字段顺序等）也能生成相同的缓存键
         cache_data = {
-            "query": query.strip(),
+            "query": query.strip(), # 去除查询文本的前后空格，避免因为多余空格导致缓存键不同
             "mode": mode,
         }
 
         # Normalize multimodal content for stable caching
+        # 规范化多模态内容，确保即使在格式上有差异（如字段顺序、文件路径等）也能生成相同的缓存键
         normalized_content = []
-        if multimodal_content:
+        if multimodal_content: # 如果提供了多模态内容，则进行规范化处理
             for item in multimodal_content:
-                if isinstance(item, dict):
+                if isinstance(item, dict): # 只处理字典类型的内容项，其他类型直接添加到规范化列表中
                     normalized_item = {}
                     for key, value in item.items():
                         # For file paths, use basename to make cache more portable
+                        # 对于文件路径，使用 basename（文件名）来生成缓存键，使其更具可移植性，避免因为不同环境中的绝对路径差异导致缓存键不同
                         if key in [
                             "img_path",
                             "image_path",
@@ -59,6 +75,7 @@ class QueryMixin:
                         ] and isinstance(value, str):
                             normalized_item[key] = Path(value).name
                         # For large content, create a hash instead of storing directly
+                        # 对于大内容，创建哈希值而不是直接存储
                         elif (
                                 key in ["table_data", "table_body"]
                                 and isinstance(value, str)
@@ -76,6 +93,7 @@ class QueryMixin:
         cache_data["multimodal_content"] = normalized_content
 
         # Add relevant kwargs to cache data
+        # 将相关的查询参数添加到缓存数据中，这些参数会影响查询结果，因此需要包含在缓存键的生成中。只选择对查询结果有实际影响的参数，避免因为无关参数的差异导致缓存键不同
         relevant_kwargs = {
             k: v
             for k, v in kwargs.items()
@@ -93,8 +111,9 @@ class QueryMixin:
         cache_data.update(relevant_kwargs)
 
         # Generate hash from the cache data
-        cache_str = json.dumps(cache_data, sort_keys=True, ensure_ascii=False)
-        cache_hash = hashlib.md5(cache_str.encode()).hexdigest()
+        # 从缓存数据生成哈希值
+        cache_str = json.dumps(cache_data, sort_keys=True, ensure_ascii=False) # 将缓存数据转换为字符串，使用 sort_keys=True 确保字典的键顺序一致，使用 ensure_ascii=False 保持非 ASCII 字符的原样输出
+        cache_hash = hashlib.md5(cache_str.encode()).hexdigest() # 生成 MD5 哈希值，作为缓存键的一部分
 
         return f"multimodal_query:{cache_hash}"
 

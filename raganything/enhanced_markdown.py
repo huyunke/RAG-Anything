@@ -553,32 +553,34 @@ class EnhancedMarkdownConverter:
         else:
             return "none"
 
-
+# 主函数，提供命令行界面，允许用户指定输入文件、输出文件、转换方法、自定义 CSS 文件以及显示后端信息等选项
 def main():
     """Command-line interface for enhanced markdown conversion"""
-    import argparse
+    import argparse # 用于解析命令行参数的模块
 
-    parser = argparse.ArgumentParser(description="Enhanced Markdown to PDF conversion")
-    parser.add_argument("input", nargs="?", help="Input markdown file")
-    parser.add_argument("--output", "-o", help="Output PDF file")
-    parser.add_argument(
+    parser = argparse.ArgumentParser(description="Enhanced Markdown to PDF conversion") # 创建一个 ArgumentParser 对象，用于定义和解析命令行参数，提供一个描述信息
+    parser.add_argument("input", nargs="?", help="Input markdown file") # 定义一个位置参数 "input"，表示输入的 Markdown 文件路径，nargs="?" 表示该参数是可选的
+    parser.add_argument("--output", "-o", help="Output PDF file") # 定义一个可选参数 "--output" 或 "-o"，表示输出的 PDF 文件路径
+    parser.add_argument( # 定义一个可选参数 "--method"，表示转换方法，提供多个选项（"auto"、"weasyprint"、"pandoc"、"pandoc_system"），默认值为 "auto"
         "--method",
         choices=["auto", "weasyprint", "pandoc", "pandoc_system"],
         default="auto",
         help="Conversion method",
     )
-    parser.add_argument("--css", help="Custom CSS file")
-    parser.add_argument("--info", action="store_true", help="Show backend information")
+    parser.add_argument("--css", help="Custom CSS file") # 定义一个可选参数 "--css"，表示自定义 CSS 文件路径，用于覆盖默认样式
+    parser.add_argument("--info", action="store_true", help="Show backend information") # 定义一个可选参数 "--info"，表示是否显示后端信息，action="store_true" 表示如果提供该参数则将其值设置为 True
 
-    args = parser.parse_args()
+    args = parser.parse_args() # 解析命令行参数，并将结果存储在 args 变量中，args.input、args.output、args.method、args.css 和 args.info 分别对应之前定义的参数
 
     # Configure logging
+    # 配置日志记录，设置日志级别为 INFO，并定义日志消息的格式，包括时间戳、记录器名称、日志级别和消息内容
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
     # Create converter
+    # 创建一个 Markdown 转换器对象，传入配置，如果用户提供了自定义 CSS 文件路径，则将其设置到配置中
     config = MarkdownConfig()
     if args.css:
         config.css_file = args.css
@@ -586,6 +588,7 @@ def main():
     converter = EnhancedMarkdownConverter(config)
 
     # Show backend info if requested
+    # 如果用户请求显示后端信息，则调用 converter.get_backend_info() 获取后端信息，并格式化输出可用的后端列表和推荐的后端，然后返回 0 表示成功退出
     if args.info:
         info = converter.get_backend_info()
         print("Backend Information:")

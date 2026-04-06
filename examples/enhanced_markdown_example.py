@@ -472,7 +472,7 @@ def demonstrate_backend_comparison():
 
                 import time
 
-                start_time = time.time()
+                start_time = time.time() # 开始计时
 
                 success = converter.convert_file_to_pdf(
                     input_path=str(tech_md_path),
@@ -480,14 +480,15 @@ def demonstrate_backend_comparison():
                     method=backend,
                 )
 
-                end_time = time.time()
-                conversion_time = end_time - start_time
+                end_time = time.time() # 结束计时
+                conversion_time = end_time - start_time # 计算转换时间
 
+                # 输出转换结果和性能指标
                 if success:
-                    file_size = (
+                    file_size = ( # 此处stat()获取文件的各种信息，st_size为文件大小，单位为字节，如果文件不存在则返回0
                         output_path.stat().st_size if output_path.exists() else 0
                     )
-                    print(
+                    print( # 输出转换成功的结果，包括使用的后端、转换时间和生成的PDF文件大小
                         f"  ✅ {backend}: Success in {conversion_time:.2f}s, {file_size} bytes"
                     )
                     results[backend] = {
@@ -505,14 +506,15 @@ def demonstrate_backend_comparison():
                 results[backend] = {"success": False, "error": str(e)}
 
         # Summary
+        # 输出不同后端的比较总结，列出成功的后端和最快的后端
         print("\n" + "-" * 40)
         print("BACKEND COMPARISON SUMMARY")
         print("-" * 40)
-        successful_backends = [b for b, r in results.items() if r.get("success", False)]
+        successful_backends = [b for b, r in results.items() if r.get("success", False)] # 列出成功的后端
         print(f"Successful backends: {successful_backends}")
 
         if successful_backends:
-            fastest = min(successful_backends, key=lambda b: results[b]["time"])
+            fastest = min(successful_backends, key=lambda b: results[b]["time"]) # 找出最快的后端
             print(f"Fastest backend: {fastest} ({results[fastest]['time']:.2f}s)")
 
         return results, temp_dir
@@ -521,7 +523,7 @@ def demonstrate_backend_comparison():
         print(f"❌ Backend comparison demonstration failed: {str(e)}")
         return None, None
 
-
+# 展示自定义CSS样式和配置的功能，创建一个具有专业外观的PDF文档，展示定制化的样式和格式
 def demonstrate_custom_styling():
     """Demonstrate custom CSS styling and configuration"""
     print("\n" + "=" * 60)
@@ -529,10 +531,11 @@ def demonstrate_custom_styling():
     print("=" * 60)
 
     try:
-        samples = create_sample_markdown_content()
-        temp_dir = Path(tempfile.mkdtemp())
+        samples = create_sample_markdown_content() # 获取示例内容
+        temp_dir = Path(tempfile.mkdtemp()) # 创建一个临时目录用于存储输入和输出文件
 
         # Create custom CSS
+        # 定义一个自定义CSS样式，展示专业的排版和设计，适用于学术论文或技术文档
         custom_css = """
         body {
             font-family: 'Times New Roman', serif;
@@ -683,22 +686,24 @@ def demonstrate_custom_styling():
         """
 
         # Create custom configuration
+        # 创建一个自定义配置对象，设置页面大小、边距、字体大小、行距、目录和语法高亮等选项
         config = MarkdownConfig(
-            page_size="A4",
-            margin="0.8in",
-            font_size="11pt",
-            line_height="1.4",
-            include_toc=True,
-            syntax_highlighting=True,
-            custom_css=custom_css,
+            page_size="A4", # 设置页面大小为A4
+            margin="0.8in", # 设置页面边距为0.8英寸
+            font_size="11pt", # 设置字体大小为11pt
+            line_height="1.4", # 设置行距为1.4
+            include_toc=True, # 包含目录
+            syntax_highlighting=True, # 启用语法高亮
+            custom_css=custom_css, # 使用定义的自定义CSS样式
         )
 
         converter = EnhancedMarkdownConverter(config)
 
         # Convert academic sample with custom styling
-        academic_md_path = temp_dir / "academic_styled.md"
+        # 应用自定义的样式和配置，将学术论文示例转换成PDF，展示专业的格式和设计
+        academic_md_path = temp_dir / "academic_styled.md" # 定义学术论文示例的路径
         with open(academic_md_path, "w", encoding="utf-8") as f:
-            f.write(samples["academic"])
+            f.write(samples["academic"]) # 将示例中的学术论文内容写入文件
 
         print("Converting academic paper with custom styling...")
         print("Custom styling features:")
@@ -709,10 +714,12 @@ def demonstrate_custom_styling():
         print("  - Custom blockquote styling")
         print("  - Professional header styling")
 
+        # 使用转换函数进行转换
         success = converter.convert_file_to_pdf(
             input_path=str(academic_md_path),
             output_path=str(temp_dir / "academic_styled.pdf"),
             method="weasyprint",  # WeasyPrint is best for custom CSS
+            # 指定使用WeasyPrint作为转换后端，因为它对自定义CSS的支持最好
         )
 
         if success:
@@ -720,6 +727,7 @@ def demonstrate_custom_styling():
             print(f"   Output: {temp_dir / 'academic_styled.pdf'}")
 
             # Also create a default version for comparison
+            # 同时创建一个使用默认设置的版本进行比较，展示定制化样式和默认样式之间的差异
             default_converter = EnhancedMarkdownConverter()
             default_success = default_converter.convert_file_to_pdf(
                 input_path=str(academic_md_path),
@@ -727,6 +735,7 @@ def demonstrate_custom_styling():
                 method="weasyprint",
             )
 
+            # 如果默认版本转换成功，展示默认版本的输出路径
             if default_success:
                 print(f"   Comparison (default): {temp_dir / 'academic_default.pdf'}")
         else:
@@ -739,6 +748,7 @@ def demonstrate_custom_styling():
         return False, None
 
 
+# 展示直接转换markdown内容的功能，不需要先保存到文件中，展示在内存中处理和转换内容的能力
 def demonstrate_content_conversion():
     """Demonstrate converting markdown content directly (not from file)"""
     print("\n" + "=" * 60)
@@ -747,10 +757,11 @@ def demonstrate_content_conversion():
 
     try:
         # Create markdown content programmatically
+        # 创建一个动态生成的markdown内容
         dynamic_content = f"""# Dynamic Content Example
 
 ## Generated Information
-This document was generated programmatically on {Path(__file__).name}.
+This document was generated programmatically on {Path(__file__).name}. 
 
 ## System Information
 - **Python Path**: {sys.executable}
@@ -794,7 +805,7 @@ Direct content conversion is useful for:
 - Real-time content processing
 """
 
-        temp_dir = Path(tempfile.mkdtemp())
+        temp_dir = Path(tempfile.mkdtemp()) # 创建一个临时目录用于存储输出文件
         converter = EnhancedMarkdownConverter()
 
         print("Converting dynamically generated markdown content...")
@@ -805,6 +816,7 @@ Direct content conversion is useful for:
         print("  - Programmatic examples")
 
         # Convert content directly to PDF
+        # 将动态生成的markdown内容直接转换成PDF
         output_path = temp_dir / "dynamic_content.pdf"
 
         success = converter.convert_markdown_to_pdf(
@@ -829,7 +841,7 @@ Direct content conversion is useful for:
         print(f"❌ Content conversion demonstration failed: {str(e)}")
         return False, None
 
-
+# 展示错误处理和回退机制，测试不同类型的错误和问题，展示系统如何处理这些情况并提供有用的反馈
 def demonstrate_error_handling():
     """Demonstrate error handling and fallback mechanisms"""
     print("\n" + "=" * 60)
@@ -840,6 +852,7 @@ def demonstrate_error_handling():
         temp_dir = Path(tempfile.mkdtemp())
 
         # Test cases with various issues
+        # 定义一些测试用例，包含不同类型的错误和问题，例如无效的markdown语法、缺失的资源、复杂的内容等，用于测试系统的错误处理能力
         test_cases = {
             "invalid_markdown": """# Invalid Markdown
 
@@ -884,6 +897,7 @@ Arrows: ← ↑ → ↓ ↔ ↕ ↖ ↗ ↘ ↙
 
             try:
                 # Try multiple backends for each test case
+                # 对每个测试用例尝试使用多个后端进行转换，展示系统在不同情况下的错误处理和回退机制
                 for backend in ["auto", "weasyprint", "pandoc"]:
                     try:
                         converter = EnhancedMarkdownConverter()
@@ -895,7 +909,7 @@ Arrows: ← ↑ → ↓ ↔ ↕ ↖ ↗ ↘ ↙
                             method=backend,
                         )
 
-                        if success:
+                        if success: # 成功时显示生成的PDF文件大小，并记录成功的结果
                             file_size = (
                                 output_path.stat().st_size
                                 if output_path.exists()
@@ -906,10 +920,11 @@ Arrows: ← ↑ → ↓ ↔ ↕ ↖ ↗ ↘ ↙
                                 "success": True,
                                 "size": file_size,
                             }
-                        else:
+                        else: # 没成功就显示失败，并记录失败的结果
                             print(f"  ❌ {backend}: Failed")
                             results[f"{test_name}_{backend}"] = {"success": False}
 
+                    # 捕获转换过程中可能发生的异常，显示错误信息，并记录错误的结果
                     except Exception as e:
                         print(f"  ❌ {backend}: Error - {str(e)[:60]}...")
                         results[f"{test_name}_{backend}"] = {
@@ -921,6 +936,7 @@ Arrows: ← ↑ → ↓ ↔ ↕ ↖ ↗ ↘ ↙
                 print(f"  ❌ Test case failed: {str(e)}")
 
         # Demonstrate robust conversion with fallbacks
+        # 展示一个更复杂的内容转换示例，使用多个后端进行尝试，如果一个后端失败则自动回退到下一个后端，展示系统的鲁棒性和错误处理能力
         print("\nDemonstrating robust conversion with fallback logic...")
 
         def robust_convert(content, output_path):
@@ -936,14 +952,14 @@ Arrows: ← ↑ → ↓ ↔ ↕ ↖ ↗ ↘ ↙
                         method=backend,
                     )
                     if success:
-                        return backend, True
+                        return backend, True # 返回成功的后端和True
                 except Exception:
-                    continue
+                    continue # 如果当前后端转换失败，继续尝试下一个后端
 
-            return None, False
+            return None, False # 如果所有后端都失败，返回None和False
 
         # Test robust conversion
-        test_content = test_cases["complex_content"]
+        test_content = test_cases["complex_content"] # 使用之前定义的复杂内容作为测试输入
         robust_output = temp_dir / "robust_conversion.pdf"
 
         successful_backend, success = robust_convert(test_content, str(robust_output))
@@ -955,14 +971,15 @@ Arrows: ← ↑ → ↓ ↔ ↕ ↖ ↗ ↘ ↙
             print("❌ All backends failed for robust conversion")
 
         # Summary
+        # 输出错误处理的总结，列出成功的转换和失败的转换，以及整体的成功率，展示系统在处理各种错误和问题时的表现
         print("\n" + "-" * 40)
         print("ERROR HANDLING SUMMARY")
         print("-" * 40)
-        successful_conversions = sum(
+        successful_conversions = sum( # 计算成功的转换次数
             1 for r in results.values() if r.get("success", False)
         )
-        total_attempts = len(results)
-        success_rate = (
+        total_attempts = len(results) # 计算总的转换尝试次数
+        success_rate = ( # 计算成功率，如果总尝试次数大于0则计算成功率，否则为0
             (successful_conversions / total_attempts * 100) if total_attempts > 0 else 0
         )
 
@@ -976,13 +993,13 @@ Arrows: ← ↑ → ↓ ↔ ↕ ↖ ↗ ↘ ↙
         print(f"❌ Error handling demonstration failed: {str(e)}")
         return None, None
 
-
+# 主函数，运行所有的演示功能，并总结展示的内容和结果，提供一个全面的演示和总结
 def main():
     """Main demonstration function"""
     # Configure logging
-    logging.basicConfig(
+    logging.basicConfig( # 配置日志记录，设置日志级别为INFO，并定义日志消息的格式
         level=logging.INFO,
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", # 定义日志消息的格式，包括时间戳、记录器名称、日志级别和消息内容
     )
 
     print("RAG-Anything Enhanced Markdown Conversion Demonstration")
@@ -996,32 +1013,38 @@ def main():
     print("  - Direct content conversion without file I/O")
     print("  - Comprehensive error handling and fallback mechanisms")
 
-    results = {}
+    results = {} # 定义一个字典用于存储每个演示的结果，方便后续总结和展示
 
     # Run demonstrations
     print("\n🚀 Starting demonstrations...")
 
     # Basic conversion
+    # 基础的markdown到PDF转换功能，使用默认设置和自动后端选择
     success, temp_dir = demonstrate_basic_conversion()
     results["basic"] = success
 
     # Backend comparison
+    # 不同转换后端的比较，测试同一文档使用不同后端进行转换，并比较结果和性能
     backend_results, _ = demonstrate_backend_comparison()
     results["backends"] = backend_results
 
     # Custom styling
+    # 自定义CSS样式和配置的功能，创建一个具有专业外观的PDF文档，展示定制化的样式和格式
     styling_success, _ = demonstrate_custom_styling()
     results["styling"] = styling_success
 
     # Content conversion
+    # 直接转换markdown内容的功能，不需要先保存到文件中，展示在内存中处理和转换内容的能力
     content_success, _ = demonstrate_content_conversion()
     results["content"] = content_success
 
     # Error handling
+    # 错误处理和回退机制，测试不同类型的错误和问题，展示系统如何处理这些情况并提供有用的反馈
     error_results, _ = demonstrate_error_handling()
     results["error_handling"] = error_results
 
     # Summary
+    # 所有演示功能运行完成后，输出一个总结，列出成功的功能和展示的内容，提供一个全面的总结和回顾
     print("\n" + "=" * 70)
     print("DEMONSTRATION SUMMARY")
     print("=" * 70)

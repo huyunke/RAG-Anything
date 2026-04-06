@@ -10,14 +10,14 @@
 3.多模态内容专项处理（使用不同的专用处理器）
 """
 
-import os
-from typing import Dict, Any, Optional, Callable
-import sys
-import asyncio
-import atexit
-from dataclasses import dataclass, field
-from pathlib import Path
-from dotenv import load_dotenv
+import os # 用于文件路径操作和环境变量管理
+from typing import Dict, Any, Optional, Callable # 用于类型注解
+import sys # 用于路径操作和系统退出
+import asyncio # 用于异步处理和并发执行
+import atexit # 用于注册对象销毁时的清理函数
+from dataclasses import dataclass, field # 用于定义数据类和字段默认值
+from pathlib import Path # 用于处理文件路径
+from dotenv import load_dotenv # 用于从 .env 文件加载环境变量
 
 # 将项目根目录添加到 Python 路径（PYTHONPATH）中
 sys.path.insert(0, str(Path(__file__).parent.parent))

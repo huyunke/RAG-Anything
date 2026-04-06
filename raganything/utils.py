@@ -4,10 +4,10 @@ RAGAnything 工具函数库
 包含用于内容分离、文本插入及其他用途的辅助函数。
 """
 
-import base64
-from typing import Dict, List, Any, Tuple
-from pathlib import Path
-from lightrag.utils import logger
+import base64 # 用于图像编码
+from typing import Dict, List, Any, Tuple # 用于类型注解
+from pathlib import Path # 用于文件路径处理
+from lightrag.utils import logger # 引入 LightRAG 的日志工具
 
 
 def separate_content(
@@ -71,6 +71,16 @@ def encode_image_to_base64(image_path: str) -> str:
     Returns:
         str: Base64 encoded string, empty string if encoding fails
     """
+
+    """
+    将图像文件编码为 Base64 字符串
+
+    参数说明：
+        image_path: 图像文件的路径
+
+    返回：
+        str: Base64 编码后的字符串，如果编码失败则返回空字符串
+    """
     try:
         with open(image_path, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode("utf-8")
@@ -91,14 +101,27 @@ def validate_image_file(image_path: str, max_size_mb: int = 50) -> bool:
     Returns:
         bool: True if valid, False otherwise
     """
+
+    """
+    验证问价是否为有效的图像文件
+
+    参数：
+        image_path: 图像文件的路径
+        max_size_mb: 文件最大大小（单位：MB）
+
+    返回：
+        bool: 如果文件有效则返回 True，否则返回 False
+    """
     try:
         path = Path(image_path)
 
+        # 详细日志记录 - 包括输入路径、解析后的路径对象以及存在性检查结果
         logger.debug(f"Validating image path: {image_path}")
         logger.debug(f"Resolved path object: {path}")
         logger.debug(f"Path exists check: {path.exists()}")
 
         # Check if file exists and is not a symlink (for security)
+        # 检查文件是否存在，并且不是符号链接（出于安全考虑）
         if not path.exists():
             logger.warning(f"Image file not found: {image_path}")
             return False
@@ -108,6 +131,7 @@ def validate_image_file(image_path: str, max_size_mb: int = 50) -> bool:
             return False
 
         # Check file extension
+        # 定义允许的图像文件扩展名列表，支持常见的图像格式
         image_extensions = [
             ".jpg",
             ".jpeg",
@@ -119,17 +143,19 @@ def validate_image_file(image_path: str, max_size_mb: int = 50) -> bool:
             ".tif",
         ]
 
-        path_lower = str(path).lower()
-        has_valid_extension = any(path_lower.endswith(ext) for ext in image_extensions)
+        path_lower = str(path).lower() # 将路径转换为小写以进行不区分大小写的扩展名检查
+        has_valid_extension = any(path_lower.endswith(ext) for ext in image_extensions) # 检查文件扩展名是否在允许的列表中
         logger.debug(
             f"File extension check - path: {path_lower}, valid: {has_valid_extension}"
         )
 
+        # 如果文件扩展名不合法，记录警告日志并返回 False
         if not has_valid_extension:
             logger.warning(f"File does not appear to be an image: {image_path}")
             return False
 
         # Check file size
+        # 检查文件大小，获取文件的实际大小并与最大允许大小进行比较
         file_size = path.stat().st_size
         max_size = max_size_mb * 1024 * 1024
         logger.debug(
@@ -210,9 +236,24 @@ async def insert_text_content_with_multimodal_content(
         file_paths: single string of the file path or list of file paths, used for citation
         scheme_name: scheme name (optional)
     """
+
+    """
+    将纯文本内容插入到 LightRAG 中，并支持多模态内容的关联
+
+    参数说明：
+    lightrag: LightRAG 实例（底层引擎）
+    input: 单个文档字符串或文档字符串列表（即你要存入的知识）
+    multimodal_content: 多模态内容列表（可选）
+    split_by_character: 如果不为 None，则按此字符（如换行符）切分字符串；如果切片后的长度超过了配置的 chunk_token_size（分片 Token 上限），它会根据 Token 大小再次进行细分
+    split_by_character_only: 如果为 True，则仅按照 split_by_character 字符切分，不再进行二次 Token 切分。如果 split_by_character 为 None，此参数无效
+    ids: 单个文档 ID 或唯一文档 ID 列表。如果不提供，系统将自动生成基于 MD5 哈希的内容 ID
+    file_paths: 单个文件路径或路径列表，主要用于 AI 生成回答时的“引用溯源”
+    scheme_name: 方案名称（可选）
+    """
     logger.info("Starting text content insertion into LightRAG...")
 
     # Use LightRAG's insert method with all parameters
+    # 使用 LightRAG 的异步插入方法 (ainsert)，并传入所有控制参数。这是真正的“入库”动作，涉及文本分段、向量化（Embedding）和存储
     try:
         await lightrag.ainsert(
             input=input,
@@ -243,7 +284,19 @@ def get_processor_for_type(modal_processors: Dict[str, Any], content_type: str):
     Returns:
         Corresponding processor instance
     """
+
+    """
+    根据内容类型获取适当的处理器
+
+    参数说明：
+        modal_processors: 可用处理器的字典
+        content_type: 内容类型
+
+    返回：
+        对应的处理器实例
+    """
     # Direct mapping to corresponding processor
+    # 根据内容类型直接映射到对应的处理器，例如：如果内容类型是 "image"，则返回 modal_processors 中的 "image" 处理器实例
     if content_type == "image":
         return modal_processors.get("image")
     elif content_type == "table":
@@ -252,9 +305,10 @@ def get_processor_for_type(modal_processors: Dict[str, Any], content_type: str):
         return modal_processors.get("equation")
     else:
         # For other types, use generic processor
+        # 对于其他类型，使用通用处理器（generic processor），它可以处理一些基本的文本分析和结构化处理任务
         return modal_processors.get("generic")
 
-
+# 获取处理器支持的功能列表，基于处理器类型返回相应的功能描述列表
 def get_processor_supports(proc_type: str) -> List[str]:
     """Get processor supported features"""
     supports_map = {
